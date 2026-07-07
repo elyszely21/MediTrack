@@ -26,9 +26,14 @@ const Login = () => {
 
     try {
       const response = await api.post('/auth/login', form);
-      localStorage.setItem('meditrackUser', JSON.stringify(response.data));
+      const data = response.data;
+      localStorage.setItem('meditrackUser', JSON.stringify(data));
       setMessage('Login successful. Redirecting...');
-      navigate('/dashboard');
+      if (data.role === 'SUPER_ADMIN') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/nurse/dashboard');
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Unable to log in right now.');
     }

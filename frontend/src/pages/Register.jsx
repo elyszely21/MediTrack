@@ -6,7 +6,7 @@ import Button from '../components/Button';
 
 const Register = () => {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ fullName: '', email: '', password: '', confirmPassword: '' });
+  const [form, setForm] = useState({ fullName: '', email: '', phoneNumber: '', password: '', confirmPassword: '' });
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
@@ -19,7 +19,7 @@ const Register = () => {
     setError('');
     setMessage('');
 
-    if (!form.fullName || !form.email || !form.password || !form.confirmPassword) {
+    if (!form.fullName || !form.email || !form.phoneNumber || !form.password || !form.confirmPassword) {
       setError('Please fill in all fields.');
       return;
     }
@@ -37,9 +37,14 @@ const Register = () => {
 
     try {
       const response = await api.post('/auth/register', form);
-      localStorage.setItem('meditrackUser', JSON.stringify(response.data));
+      const data = response.data;
+      localStorage.setItem('meditrackUser', JSON.stringify(data));
       setMessage('Registration successful. Redirecting...');
-      navigate('/dashboard');
+      if (data.role === 'SUPER_ADMIN') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/nurse/dashboard');
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed.');
     }
@@ -49,10 +54,11 @@ const Register = () => {
     <div className="auth-page">
       <div className="auth-card">
         <h2>Create Account</h2>
-        <p>Start managing your medicines and schedules with confidence.</p>
+        <p>Join MediTrack to access healthcare services and manage your health records.</p>
         <form onSubmit={handleSubmit} className="auth-form">
           <Input label="Full Name" name="fullName" value={form.fullName} onChange={handleChange} placeholder="Juan Dela Cruz" />
           <Input label="Email" type="email" name="email" value={form.email} onChange={handleChange} placeholder="you@example.com" />
+          <Input label="Phone Number" name="phoneNumber" value={form.phoneNumber} onChange={handleChange} placeholder="09XXXXXXXXX" />
           <Input label="Password" type="password" name="password" value={form.password} onChange={handleChange} placeholder="Create password" />
           <Input label="Confirm Password" type="password" name="confirmPassword" value={form.confirmPassword} onChange={handleChange} placeholder="Confirm password" />
           <Button label="Register" type="submit" />

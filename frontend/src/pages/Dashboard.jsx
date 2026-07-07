@@ -1,20 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState(null);
+  const storedUser = localStorage.getItem('meditrackUser');
+  const user = storedUser ? JSON.parse(storedUser) : null;
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('meditrackUser');
     if (!storedUser) {
       navigate('/login');
-      return;
     }
-
-    setUser(JSON.parse(storedUser));
-  }, [navigate]);
+  }, [navigate, storedUser]);
 
   if (!user) {
     return null;
