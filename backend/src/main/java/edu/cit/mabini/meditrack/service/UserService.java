@@ -28,8 +28,9 @@ public class UserService {
         User user = User.builder()
                 .fullName(request.getFullName().trim())
                 .email(request.getEmail().trim().toLowerCase())
+                .phoneNumber(request.getPhoneNumber().trim())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role("USER")
+                .role(request.getRole() == null || request.getRole().isBlank() ? "NURSE" : request.getRole())
                 .build();
 
         return userRepository.save(user);

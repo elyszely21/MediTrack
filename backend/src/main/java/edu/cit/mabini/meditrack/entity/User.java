@@ -36,6 +36,9 @@ public class User {
     private String email;
 
     @Column(nullable = false)
+    private String phoneNumber;
+
+    @Column(nullable = false)
     @JsonIgnore
     private String password;
 
