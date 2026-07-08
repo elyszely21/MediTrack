@@ -10,20 +10,34 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import edu.cit.mabini.meditrack.api.RetrofitClient
 import edu.cit.mabini.meditrack.navigation.AppNavigation
-import edu.cit.mabini.meditrack.repository.AuthRepository
+import edu.cit.mabini.meditrack.repository.*
 import edu.cit.mabini.meditrack.ui.theme.MeditrackTheme
-import edu.cit.mabini.meditrack.viewmodel.AuthViewModel
+import edu.cit.mabini.meditrack.util.SessionManager
+import edu.cit.mabini.meditrack.viewmodel.*
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Initialize Repository and ViewModel
-        // In a real production app, consider using Dagger Hilt for Dependency Injection
+        // Initialize SessionManager
+        val sessionManager = SessionManager(this)
+        RetrofitClient.init(sessionManager)
+
+        // Initialize API Service
         val apiService = RetrofitClient.apiService
+
+        // Initialize Repositories
         val authRepository = AuthRepository(apiService)
-        val authViewModel = AuthViewModel(authRepository)
+        val patientRepository = PatientRepository(apiService)
+        val appointmentRepository = AppointmentRepository(apiService)
+        val medicalRecordRepository = MedicalRecordRepository(apiService)
+
+        // Initialize ViewModels
+        val authViewModel = AuthViewModel(authRepository, sessionManager)
+        val patientViewModel = PatientViewModel(patientRepository)
+        val appointmentViewModel = AppointmentViewModel(appointmentRepository)
+        val medicalRecordViewModel = MedicalRecordViewModel(medicalRecordRepository)
 
         setContent {
             MeditrackTheme {
@@ -31,7 +45,12 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    AppNavigation(authViewModel = authViewModel)
+                    AppNavigation(
+                        authViewModel = authViewModel,
+                        patientViewModel = patientViewModel,
+                        appointmentViewModel = appointmentViewModel,
+                        medicalRecordViewModel = medicalRecordViewModel
+                    )
                 }
             }
         }
