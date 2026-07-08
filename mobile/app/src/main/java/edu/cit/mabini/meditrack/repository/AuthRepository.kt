@@ -4,7 +4,6 @@ import edu.cit.mabini.meditrack.api.ApiService
 import edu.cit.mabini.meditrack.model.LoginRequest
 import edu.cit.mabini.meditrack.model.LoginResponse
 import edu.cit.mabini.meditrack.model.RegisterRequest
-import edu.cit.mabini.meditrack.model.User
 import retrofit2.Response
 
 class AuthRepository(private val apiService: ApiService) {
@@ -12,7 +11,7 @@ class AuthRepository(private val apiService: ApiService) {
         return apiService.login(loginRequest)
     }
 
-    suspend fun register(registerRequest: RegisterRequest): Response<User> {
+    suspend fun register(registerRequest: RegisterRequest): Response<LoginResponse> {
         return apiService.register(registerRequest)
     }
 }
