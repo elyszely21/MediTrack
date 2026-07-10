@@ -12,6 +12,8 @@ import Nurses from './pages/Nurses';
 import RegisterNurse from './pages/RegisterNurse';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
+import Prescriptions from './pages/Prescriptions';
+import Billing from './pages/Billing';
 
 function App() {
   return (
@@ -27,9 +29,11 @@ function App() {
           <Route path="/patients" element={<Patients />} />
           <Route path="/records" element={<MedicalRecords />} />
           <Route path="/appointments" element={<Appointments />} />
+          <Route path="/billing" element={<Billing />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/nurses" element={<Nurses />} />
           <Route path="/admin/register-nurse" element={<RegisterNurse />} />
+          <Route path="/prescriptions" element={<Prescriptions />} />
         </Route>
       </Routes>
     </Router>
