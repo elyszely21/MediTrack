@@ -9,40 +9,96 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+sealed class AppointmentUiState {
+    object Idle : AppointmentUiState()
+    object Loading : AppointmentUiState()
+    data class Success(val appointments: List<AppointmentDto>) : AppointmentUiState()
+    data class Error(val message: String) : AppointmentUiState()
+}
+
+sealed class AppointmentActionState {
+    object Idle : AppointmentActionState()
+    object Loading : AppointmentActionState()
+    object Success : AppointmentActionState()
+    data class Error(val message: String) : AppointmentActionState()
+}
+
 class AppointmentViewModel(private val repository: AppointmentRepository) : ViewModel() {
 
-    private val _appointmentsState = MutableStateFlow<UIState<List<AppointmentDto>>>(UIState.Idle)
-    val appointmentsState: StateFlow<UIState<List<AppointmentDto>>> = _appointmentsState.asStateFlow()
+    private val _uiState = MutableStateFlow<AppointmentUiState>(AppointmentUiState.Idle)
+    val uiState: StateFlow<AppointmentUiState> = _uiState.asStateFlow()
 
-    fun fetchAppointments() {
+    private val _actionState = MutableStateFlow<AppointmentActionState>(AppointmentActionState.Idle)
+    val actionState: StateFlow<AppointmentActionState> = _actionState.asStateFlow()
+
+    fun loadAppointments() {
         viewModelScope.launch {
-            _appointmentsState.value = UIState.Loading
+            _uiState.value = AppointmentUiState.Loading
             try {
-                val response = repository.getAppointments()
+                val response = repository.getAll()
                 if (response.isSuccessful) {
-                    _appointmentsState.value = UIState.Success(response.body() ?: emptyList())
+                    _uiState.value = AppointmentUiState.Success(response.body() ?: emptyList())
                 } else {
-                    _appointmentsState.value = UIState.Error("Error: ${response.code()}")
+                    _uiState.value = AppointmentUiState.Error("Error: ${response.code()}")
                 }
             } catch (e: Exception) {
-                _appointmentsState.value = UIState.Error(e.message ?: "An unexpected error occurred")
+                _uiState.value = AppointmentUiState.Error(e.message ?: "An unexpected error occurred")
             }
         }
     }
 
-    fun createAppointment(appointment: AppointmentDto, onResult: (Boolean) -> Unit) {
+    fun createAppointment(dto: AppointmentDto) {
         viewModelScope.launch {
+            _actionState.value = AppointmentActionState.Loading
             try {
-                val response = repository.createAppointment(appointment)
+                val response = repository.create(dto)
                 if (response.isSuccessful) {
-                    fetchAppointments()
-                    onResult(true)
+                    _actionState.value = AppointmentActionState.Success
+                    loadAppointments()
                 } else {
-                    onResult(false)
+                    _actionState.value = AppointmentActionState.Error("Failed to create appointment")
                 }
             } catch (e: Exception) {
-                onResult(false)
+                _actionState.value = AppointmentActionState.Error(e.message ?: "An unexpected error occurred")
             }
         }
+    }
+
+    fun updateAppointment(id: Long, dto: AppointmentDto) {
+        viewModelScope.launch {
+            _actionState.value = AppointmentActionState.Loading
+            try {
+                val response = repository.update(id, dto)
+                if (response.isSuccessful) {
+                    _actionState.value = AppointmentActionState.Success
+                    loadAppointments()
+                } else {
+                    _actionState.value = AppointmentActionState.Error("Failed to update appointment")
+                }
+            } catch (e: Exception) {
+                _actionState.value = AppointmentActionState.Error(e.message ?: "An unexpected error occurred")
+            }
+        }
+    }
+
+    fun deleteAppointment(id: Long) {
+        viewModelScope.launch {
+            _actionState.value = AppointmentActionState.Loading
+            try {
+                val response = repository.delete(id)
+                if (response.isSuccessful) {
+                    _actionState.value = AppointmentActionState.Success
+                    loadAppointments()
+                } else {
+                    _actionState.value = AppointmentActionState.Error("Failed to delete appointment")
+                }
+            } catch (e: Exception) {
+                _actionState.value = AppointmentActionState.Error(e.message ?: "An unexpected error occurred")
+            }
+        }
+    }
+
+    fun resetActionState() {
+        _actionState.value = AppointmentActionState.Idle
     }
 }

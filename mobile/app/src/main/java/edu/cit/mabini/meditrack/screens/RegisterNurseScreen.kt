@@ -1,12 +1,11 @@
 package edu.cit.mabini.meditrack.screens
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,17 +13,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import edu.cit.mabini.meditrack.viewmodel.AuthUiState
 import edu.cit.mabini.meditrack.viewmodel.AuthViewModel
+import kotlinx.coroutines.delay
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RegisterScreen(
+fun RegisterNurseScreen(
     viewModel: AuthViewModel,
-    onRegisterSuccess: () -> Unit,
-    onNavigateToLogin: () -> Unit
+    onBack: () -> Unit,
+    onSuccess: () -> Unit
 ) {
     var fullName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -34,15 +34,30 @@ fun RegisterScreen(
     var localError by remember { mutableStateOf("") }
 
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(uiState) {
         if (uiState is AuthUiState.Success) {
-            onRegisterSuccess()
+            snackbarHostState.showSnackbar("Nurse registered")
+            delay(1000)
+            onSuccess()
             viewModel.resetState()
         }
     }
 
     Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Register Nurse", fontWeight = FontWeight.Bold, color = Color.White) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF161B22))
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = Color(0xFF0D1117)
     ) { padding ->
         Column(
@@ -51,14 +66,12 @@ fun RegisterScreen(
                 .padding(padding)
                 .padding(24.dp)
                 .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "MediTrack",
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF2196F3)
+                text = "Add a new clinic nurse account",
+                fontSize = 14.sp,
+                color = Color(0xFF8B949E)
             )
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -70,14 +83,6 @@ fun RegisterScreen(
                 Column(
                     modifier = Modifier.padding(24.dp)
                 ) {
-                    Text(
-                        text = "Create Account",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Spacer(modifier = Modifier.height(20.dp))
-
                     RegisterInputField(
                         label = "Full Name",
                         value = fullName,
@@ -133,7 +138,7 @@ fun RegisterScreen(
                             else if (password != confirmPassword) localError = "Passwords do not match"
                             else {
                                 localError = ""
-                                viewModel.register(fullName, email, phoneNumber, password, confirmPassword)
+                                viewModel.registerNurse(fullName, email, phoneNumber, password, confirmPassword)
                             }
                         },
                         modifier = Modifier
@@ -146,58 +151,11 @@ fun RegisterScreen(
                         if (uiState is AuthUiState.Loading) {
                             CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
                         } else {
-                            Text("Register", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            Text("Register Nurse", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                         }
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(20.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Text("Already have an account? ", color = Color(0xFF8B949E))
-                Text(
-                    text = "Sign In",
-                    color = Color(0xFF2196F3),
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable { onNavigateToLogin() }
-                )
-            }
         }
     }
-}
-
-@Composable
-fun RegisterInputField(
-    label: String,
-    value: String,
-    onValueChange: (String) -> Unit,
-    keyboardType: KeyboardType,
-    isPassword: Boolean = false
-) {
-    Text(label, fontSize = 12.sp, color = Color(0xFF8B949E))
-    Spacer(modifier = Modifier.height(4.dp))
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        visualTransformation = if (isPassword) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
-        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = Color(0xFF2196F3),
-            unfocusedBorderColor = Color(0xFF30363D),
-            focusedLabelColor = Color(0xFF2196F3),
-            unfocusedLabelColor = Color(0xFF8B949E),
-            cursorColor = Color(0xFF2196F3),
-            focusedTextColor = Color.White,
-            unfocusedTextColor = Color.White,
-            focusedContainerColor = Color(0xFF21262D),
-            unfocusedContainerColor = Color(0xFF21262D)
-        ),
-        singleLine = true
-    )
-    Spacer(modifier = Modifier.height(12.dp))
 }

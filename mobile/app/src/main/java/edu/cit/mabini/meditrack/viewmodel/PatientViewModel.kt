@@ -9,60 +9,96 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-sealed class UIState<out T> {
-    object Idle : UIState<Nothing>()
-    object Loading : UIState<Nothing>()
-    data class Success<T>(val data: T) : UIState<T>()
-    data class Error(val message: String) : UIState<Nothing>()
+sealed class PatientUiState {
+    object Idle : PatientUiState()
+    object Loading : PatientUiState()
+    data class Success(val patients: List<PatientDto>) : PatientUiState()
+    data class Error(val message: String) : PatientUiState()
+}
+
+sealed class PatientActionState {
+    object Idle : PatientActionState()
+    object Loading : PatientActionState()
+    object Success : PatientActionState()
+    data class Error(val message: String) : PatientActionState()
 }
 
 class PatientViewModel(private val repository: PatientRepository) : ViewModel() {
 
-    private val _patientsState = MutableStateFlow<UIState<List<PatientDto>>>(UIState.Idle)
-    val patientsState: StateFlow<UIState<List<PatientDto>>> = _patientsState.asStateFlow()
+    private val _uiState = MutableStateFlow<PatientUiState>(PatientUiState.Idle)
+    val uiState: StateFlow<PatientUiState> = _uiState.asStateFlow()
 
-    fun fetchPatients() {
+    private val _actionState = MutableStateFlow<PatientActionState>(PatientActionState.Idle)
+    val actionState: StateFlow<PatientActionState> = _actionState.asStateFlow()
+
+    fun loadPatients() {
         viewModelScope.launch {
-            _patientsState.value = UIState.Loading
+            _uiState.value = PatientUiState.Loading
             try {
-                val response = repository.getPatients()
+                val response = repository.getAll()
                 if (response.isSuccessful) {
-                    _patientsState.value = UIState.Success(response.body() ?: emptyList())
+                    _uiState.value = PatientUiState.Success(response.body() ?: emptyList())
                 } else {
-                    _patientsState.value = UIState.Error("Error: ${response.code()}")
+                    _uiState.value = PatientUiState.Error("Error: ${response.code()}")
                 }
             } catch (e: Exception) {
-                _patientsState.value = UIState.Error(e.message ?: "An unexpected error occurred")
+                _uiState.value = PatientUiState.Error(e.message ?: "An unexpected error occurred")
             }
         }
     }
 
-    fun addPatient(patient: PatientDto, onResult: (Boolean) -> Unit) {
+    fun createPatient(dto: PatientDto) {
         viewModelScope.launch {
+            _actionState.value = PatientActionState.Loading
             try {
-                val response = repository.createPatient(patient)
+                val response = repository.create(dto)
                 if (response.isSuccessful) {
-                    fetchPatients()
-                    onResult(true)
+                    _actionState.value = PatientActionState.Success
+                    loadPatients()
                 } else {
-                    onResult(false)
+                    _actionState.value = PatientActionState.Error("Failed to create patient")
                 }
             } catch (e: Exception) {
-                onResult(false)
+                _actionState.value = PatientActionState.Error(e.message ?: "An unexpected error occurred")
+            }
+        }
+    }
+
+    fun updatePatient(id: Long, dto: PatientDto) {
+        viewModelScope.launch {
+            _actionState.value = PatientActionState.Loading
+            try {
+                val response = repository.update(id, dto)
+                if (response.isSuccessful) {
+                    _actionState.value = PatientActionState.Success
+                    loadPatients()
+                } else {
+                    _actionState.value = PatientActionState.Error("Failed to update patient")
+                }
+            } catch (e: Exception) {
+                _actionState.value = PatientActionState.Error(e.message ?: "An unexpected error occurred")
             }
         }
     }
 
     fun deletePatient(id: Long) {
         viewModelScope.launch {
+            _actionState.value = PatientActionState.Loading
             try {
-                val response = repository.deletePatient(id)
+                val response = repository.delete(id)
                 if (response.isSuccessful) {
-                    fetchPatients()
+                    _actionState.value = PatientActionState.Success
+                    loadPatients()
+                } else {
+                    _actionState.value = PatientActionState.Error("Failed to delete patient")
                 }
             } catch (e: Exception) {
-                // Handle error
+                _actionState.value = PatientActionState.Error(e.message ?: "An unexpected error occurred")
             }
         }
+    }
+
+    fun resetActionState() {
+        _actionState.value = PatientActionState.Idle
     }
 }

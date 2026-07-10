@@ -1,53 +1,124 @@
 package edu.cit.mabini.meditrack.navigation
 
+import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import edu.cit.mabini.meditrack.api.RetrofitClient
+import edu.cit.mabini.meditrack.repository.*
 import edu.cit.mabini.meditrack.screens.*
+import edu.cit.mabini.meditrack.session.SessionManager
 import edu.cit.mabini.meditrack.viewmodel.*
 
-sealed class Screen(val route: String) {
-    object Login : Screen("login")
-    object Register : Screen("register")
-    object Dashboard : Screen("dashboard")
-    object Patients : Screen("patients")
-    object Appointments : Screen("appointments")
-    object MedicalRecords : Screen("medical_records")
-    object Profile : Screen("profile")
-}
-
 @Composable
-fun AppNavigation(
-    authViewModel: AuthViewModel,
-    patientViewModel: PatientViewModel,
-    appointmentViewModel: AppointmentViewModel,
-    medicalRecordViewModel: MedicalRecordViewModel
-) {
+fun AppNavigation(context: Context) {
+    val session = remember { SessionManager(context) }
+    val api = remember { RetrofitClient.create(context) }
+
+    val authViewModel = remember { AuthViewModel(AuthRepository(api), session) }
+    val patientViewModel = remember { PatientViewModel(PatientRepository(api)) }
+    val appointmentViewModel = remember { AppointmentViewModel(AppointmentRepository(api)) }
+    val medicalRecordViewModel = remember { MedicalRecordViewModel(MedicalRecordRepository(api)) }
+
     val navController = rememberNavController()
-    val startDestination = if (authViewModel.isLoggedIn()) Screen.Dashboard.route else Screen.Login.route
+    val startDestination = if (authViewModel.isLoggedIn()) "dashboard" else "login"
 
     NavHost(navController = navController, startDestination = startDestination) {
-        composable(Screen.Login.route) {
-            LoginScreen(navController = navController, viewModel = authViewModel)
+        composable("login") {
+            LoginScreen(
+                viewModel = authViewModel,
+                onLoginSuccess = {
+                    navController.navigate("dashboard") {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                onNavigateToRegister = {
+                    navController.navigate("register")
+                }
+            )
         }
-        composable(Screen.Register.route) {
-            RegisterScreen(navController = navController, viewModel = authViewModel)
+
+        composable("register") {
+            RegisterScreen(
+                viewModel = authViewModel,
+                onRegisterSuccess = {
+                    navController.navigate("login") {
+                        popUpTo("register") { inclusive = true }
+                    }
+                },
+                onNavigateToLogin = {
+                    navController.popBackStack()
+                }
+            )
         }
-        composable(Screen.Dashboard.route) {
-            DashboardScreen(navController = navController, viewModel = authViewModel)
+
+        composable("dashboard") {
+            DashboardScreen(
+                viewModel = authViewModel,
+                onLogout = {
+                    navController.navigate("login") {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                onNavigateToPatients = { navController.navigate("patients") },
+                onNavigateToAppointments = { navController.navigate("appointments") },
+                onNavigateToRecords = {
+                    val role = authViewModel.getRole()
+                    if (role == "SUPER_ADMIN" || role == "NURSE") {
+                        // Staff go to Patients first or a generic list
+                        navController.navigate("patients")
+                    } else {
+                        // Patients go directly to their own records
+                        val myId = authViewModel.getUserId()
+                        navController.navigate("records/$myId")
+                    }
+                },
+                onNavigateToRegisterNurse = { navController.navigate("register_nurse") }
+            )
         }
-        composable(Screen.Patients.route) {
-            PatientsScreen(navController = navController, viewModel = patientViewModel)
+
+        composable("patients") {
+            PatientsScreen(
+                viewModel = patientViewModel,
+                onBack = { navController.popBackStack() },
+                onViewRecords = { patientId ->
+                    navController.navigate("records/$patientId")
+                }
+            )
         }
-        composable(Screen.Appointments.route) {
-            AppointmentsScreen(navController = navController, viewModel = appointmentViewModel)
+
+        composable("appointments") {
+            AppointmentsScreen(
+                viewModel = appointmentViewModel,
+                userRole = authViewModel.getRole(),
+                userId = authViewModel.getUserId(),
+                onBack = { navController.popBackStack() }
+            )
         }
-        composable(Screen.MedicalRecords.route) {
-            MedicalRecordsScreen(navController = navController, viewModel = medicalRecordViewModel)
+
+        composable(
+            route = "records/{patientId}",
+            arguments = listOf(navArgument("patientId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val patientId = backStackEntry.arguments?.getLong("patientId") ?: 0L
+            MedicalRecordsScreen(
+                patientId = patientId,
+                viewModel = medicalRecordViewModel,
+                userRole = authViewModel.getRole(),
+                onBack = { navController.popBackStack() }
+            )
         }
-        composable(Screen.Profile.route) {
-            ProfileScreen(navController = navController, viewModel = authViewModel)
+
+        composable("register_nurse") {
+            RegisterNurseScreen(
+                viewModel = authViewModel,
+                onBack = { navController.popBackStack() },
+                onSuccess = { navController.popBackStack() }
+            )
         }
     }
 }
