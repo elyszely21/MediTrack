@@ -4,9 +4,20 @@ import edu.cit.mabini.meditrack.api.ApiService
 import edu.cit.mabini.meditrack.model.AppointmentDto
 import retrofit2.Response
 
-class AppointmentRepository(private val apiService: ApiService) {
-    suspend fun getAppointments(): Response<List<AppointmentDto>> = apiService.getAppointments()
-    suspend fun createAppointment(appointment: AppointmentDto): Response<AppointmentDto> = apiService.createAppointment(appointment)
-    suspend fun updateAppointment(id: Long, appointment: AppointmentDto): Response<AppointmentDto> = apiService.updateAppointment(id, appointment)
-    suspend fun deleteAppointment(id: Long): Response<Unit> = apiService.deleteAppointment(id)
+class AppointmentRepository(private val api: ApiService) {
+    suspend fun getAll(): Response<List<AppointmentDto>> = api.getAppointments()
+
+    suspend fun getByDate(date: String): Response<List<AppointmentDto>> =
+        api.getAppointmentsByDate(date)
+
+    suspend fun getByPatient(id: Long): Response<List<AppointmentDto>> =
+        api.getAppointmentsByPatient(id)
+
+    suspend fun create(dto: AppointmentDto): Response<AppointmentDto> =
+        api.createAppointment(dto)
+
+    suspend fun update(id: Long, dto: AppointmentDto): Response<AppointmentDto> =
+        api.updateAppointment(id, dto)
+
+    suspend fun delete(id: Long): Response<Unit> = api.deleteAppointment(id)
 }
