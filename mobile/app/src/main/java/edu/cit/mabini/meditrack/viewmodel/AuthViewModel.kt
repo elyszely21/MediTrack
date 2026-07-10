@@ -2,88 +2,132 @@ package edu.cit.mabini.meditrack.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import edu.cit.mabini.meditrack.model.LoginRequest
 import edu.cit.mabini.meditrack.model.LoginResponse
-import edu.cit.mabini.meditrack.model.RegisterRequest
 import edu.cit.mabini.meditrack.repository.AuthRepository
-import edu.cit.mabini.meditrack.util.SessionManager
+import edu.cit.mabini.meditrack.session.SessionManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-sealed class AuthState {
-    object Idle : AuthState()
-    object Loading : AuthState()
-    data class Success<T>(val data: T) : AuthState()
-    data class Error(val message: String) : AuthState()
+sealed class AuthUiState {
+    object Idle : AuthUiState()
+    object Loading : AuthUiState()
+    data class Success(val data: LoginResponse) : AuthUiState()
+    data class Error(val message: String) : AuthUiState()
 }
 
 class AuthViewModel(
     private val repository: AuthRepository,
-    private val sessionManager: SessionManager
+    private val session: SessionManager
 ) : ViewModel() {
 
-    private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
-    val authState: StateFlow<AuthState> = _authState.asStateFlow()
+    private val _uiState = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
+    val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
     fun login(email: String, password: String) {
         viewModelScope.launch {
-            _authState.value = AuthState.Loading
+            _uiState.value = AuthUiState.Loading
             try {
-                val response = repository.login(LoginRequest(email, password))
+                val response = repository.login(email.trim(), password)
                 if (response.isSuccessful && response.body() != null) {
-                    val loginResponse = response.body()!!
-                    sessionManager.saveSession(
-                        token = loginResponse.token,
-                        fullName = loginResponse.fullName,
-                        email = loginResponse.email,
-                        role = loginResponse.role
-                    )
-                    _authState.value = AuthState.Success(loginResponse)
+                    val body = response.body()!!
+                    session.save(body)
+                    _uiState.value = AuthUiState.Success(body)
                 } else {
-                    _authState.value = AuthState.Error(response.errorBody()?.string() ?: "Login failed")
+                    _uiState.value = AuthUiState.Error(parseError(response.errorBody()?.string()))
                 }
             } catch (e: Exception) {
-                _authState.value = AuthState.Error(e.message ?: "An unexpected error occurred")
+                _uiState.value = AuthUiState.Error(e.message ?: "Network error")
             }
         }
     }
 
-    fun register(fullName: String, email: String, phoneNumber: String, password: String, confirmPassword: String) {
+    fun register(
+        fullName: String,
+        email: String,
+        phoneNumber: String,
+        password: String,
+        confirmPassword: String
+    ) {
         viewModelScope.launch {
-            _authState.value = AuthState.Loading
+            _uiState.value = AuthUiState.Loading
             try {
-                val response = repository.register(RegisterRequest(fullName, email, phoneNumber, password, confirmPassword))
+                val response = repository.register(
+                    fullName.trim(),
+                    email.trim(),
+                    phoneNumber.trim(),
+                    password,
+                    confirmPassword
+                )
                 if (response.isSuccessful && response.body() != null) {
-                    val loginResponse = response.body()!!
-                    sessionManager.saveSession(
-                        token = loginResponse.token,
-                        fullName = loginResponse.fullName,
-                        email = loginResponse.email,
-                        role = loginResponse.role
-                    )
-                    _authState.value = AuthState.Success(loginResponse)
+                    _uiState.value = AuthUiState.Success(response.body()!!)
                 } else {
-                    _authState.value = AuthState.Error(response.errorBody()?.string() ?: "Registration failed")
+                    _uiState.value = AuthUiState.Error(parseError(response.errorBody()?.string()))
                 }
             } catch (e: Exception) {
-                _authState.value = AuthState.Error(e.message ?: "An unexpected error occurred")
+                _uiState.value = AuthUiState.Error(e.message ?: "Network error")
+            }
+        }
+    }
+
+    fun registerNurse(
+        fullName: String,
+        email: String,
+        phoneNumber: String,
+        password: String,
+        confirmPassword: String
+    ) {
+        viewModelScope.launch {
+            _uiState.value = AuthUiState.Loading
+            try {
+                val response = repository.registerNurse(
+                    fullName.trim(),
+                    email.trim(),
+                    phoneNumber.trim(),
+                    password,
+                    confirmPassword
+                )
+                if (response.isSuccessful && response.body() != null) {
+                    _uiState.value = AuthUiState.Success(response.body()!!)
+                } else {
+                    _uiState.value = AuthUiState.Error(parseError(response.errorBody()?.string()))
+                }
+            } catch (e: Exception) {
+                _uiState.value = AuthUiState.Error(e.message ?: "Network error")
             }
         }
     }
 
     fun logout() {
-        sessionManager.clearSession()
-        _authState.value = AuthState.Idle
+        session.clear()
+        _uiState.value = AuthUiState.Idle
     }
 
-    fun isLoggedIn(): Boolean = sessionManager.isLoggedIn()
-    
-    fun getFullName(): String = sessionManager.getFullName() ?: ""
-    fun getRole(): String = sessionManager.getRole() ?: ""
-
     fun resetState() {
-        _authState.value = AuthState.Idle
+        _uiState.value = AuthUiState.Idle
+    }
+
+    fun getUserId() = session.getUserId()
+    fun getFullName() = session.getFullName() ?: "User"
+    fun getRole() = session.getRole() ?: ""
+    fun isSuperAdmin() = session.isSuperAdmin()
+    fun isLoggedIn() = session.isLoggedIn()
+
+    private fun parseError(raw: String?): String {
+        if (raw == null) return "Something went wrong"
+        return try {
+            val key = "\"message\":\""
+            if (raw.contains(key)) {
+                val start = raw.indexOf(key) + key.length
+                val end = raw.indexOf("\"", start)
+                val msg = raw.substring(start, end)
+                if (msg.isNotBlank()) msg else raw
+            } else {
+                raw
+            }
+        } catch (e: Exception) {
+            raw
+        }
     }
 }
