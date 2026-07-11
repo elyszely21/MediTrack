@@ -20,9 +20,10 @@ const Navbar = () => {
         <Link to="/dashboard">Dashboard</Link>
         <Link to="/patients">Patients</Link>
         <Link to="/records">Medical Records</Link>
-        <Link to="/prescriptions">Prescriptions</Link>
+        <NavLink to="/prescriptions">Prescriptions</NavLink>
         <Link to="/appointments">Appointments</Link>
-        <Link to="/billing">Billing</Link>
+        <NavLink to="/billing">Billing</NavLink>
+        <NavLink to="/consultations">Consultations</NavLink>
         {role === 'SUPER_ADMIN' && <Link to="/nurses">Nurses</Link>}
         {role === 'SUPER_ADMIN' && <Link to="/reports">Reports</Link>}
         <button className="logout-button" onClick={handleLogout}>Logout</button>

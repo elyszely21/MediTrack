@@ -14,6 +14,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 import Prescriptions from './pages/Prescriptions';
 import Billing from './pages/Billing';
+import Consultations from "./pages/Consultations";
 
 function App() {
   return (
@@ -29,11 +30,12 @@ function App() {
           <Route path="/patients" element={<Patients />} />
           <Route path="/records" element={<MedicalRecords />} />
           <Route path="/appointments" element={<Appointments />} />
-          <Route path="/billing" element={<Billing />} />
+          <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/nurses" element={<Nurses />} />
           <Route path="/admin/register-nurse" element={<RegisterNurse />} />
-          <Route path="/prescriptions" element={<Prescriptions />} />
+          <Route path="/prescriptions" element={<ProtectedRoute><Prescriptions /></ProtectedRoute>} />
+          <Route path="/consultations" element={<ProtectedRoute><Consultations /></ProtectedRoute>} />
         </Route>
       </Routes>
     </Router>
