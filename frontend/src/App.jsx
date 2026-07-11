@@ -14,6 +14,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 import Prescriptions from './pages/Prescriptions';
 import Billing from './pages/Billing';
+import Doctors         from "./pages/Doctors";
+import DoctorDashboard from "./pages/DoctorDashboard";
 
 function App() {
   return (
@@ -34,6 +36,8 @@ function App() {
           <Route path="/nurses" element={<Nurses />} />
           <Route path="/admin/register-nurse" element={<RegisterNurse />} />
           <Route path="/prescriptions" element={<Prescriptions />} />
+          <Route path="/doctors" element={<ProtectedRoute><Doctors /></ProtectedRoute>} />
+          <Route path="/doctor/dashboard" element={<ProtectedRoute><DoctorDashboard /></ProtectedRoute>} />
         </Route>
       </Routes>
     </Router>

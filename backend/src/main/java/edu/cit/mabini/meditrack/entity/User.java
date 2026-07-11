@@ -45,6 +45,9 @@ public class User {
     @Column(nullable = false)
     private String role;
 
+    private String specialization;
+    private String licenseNumber;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

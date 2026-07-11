@@ -28,6 +28,7 @@ const Navbar = () => {
         <Link to="/consultations">Consultations</Link>
         {role === 'SUPER_ADMIN' && <Link to="/nurses">Nurses</Link>}
         {role === 'SUPER_ADMIN' && <Link to="/reports">Reports</Link>}
+        {role === 'SUPER_ADMIN' && <Link to="/doctors">Doctors</Link>}
         <button className="logout-button" onClick={handleLogout}>Logout</button>
       </div>
     </nav>

@@ -31,6 +31,8 @@ const Login = () => {
       setMessage('Login successful. Redirecting...');
       if (data.role === 'SUPER_ADMIN') {
         navigate('/admin/dashboard');
+      } else if (role === 'ROLE_DOCTOR') {
+        navigate('/doctor/dashboard');
       } else {
         navigate('/nurse/dashboard');
       }
