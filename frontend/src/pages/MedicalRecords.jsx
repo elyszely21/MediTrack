@@ -1,104 +1,79 @@
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import Navbar from '../components/Navbar';
-import Input from '../components/Input';
-import Button from '../components/Button';
-import api from '../api/axios';
+import { useEffect, useState } from "react";
+import axios from "../api/axios";
 
-const emptyForm = { diagnosis: '', treatment: '', prescription: '', notes: '', visitDate: '' };
-
-const MedicalRecords = () => {
-  const [searchParams] = useSearchParams();
-  const [patients, setPatients] = useState([]);
-  const [patientId, setPatientId] = useState(searchParams.get('patientId') || '');
+export default function MedicalRecords() {
   const [records, setRecords] = useState([]);
-  const [form, setForm] = useState(emptyForm);
-  const [error, setError] = useState('');
+  const [patientId, setPatientId] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({
+    patientId:"", diagnosis:"", treatment:"",
+    prescription:"", notes:"", visitDate:""
+  });
 
-  useEffect(() => {
-    api.get('/patients').then((res) => setPatients(res.data)).catch(() => {});
-  }, []);
-
-  const loadRecords = async (id) => {
-    if (!id) { setRecords([]); return; }
-    try {
-      const res = await api.get(`/records/patient/${id}`);
-      setRecords(res.data);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load records');
-    }
+  const fetchRecords = async () => {
+    if (!patientId) return;
+    const res = await axios.get(`/records/patient/${patientId}`);
+    setRecords(res.data);
   };
-
-  useEffect(() => { loadRecords(patientId); }, [patientId]);
-
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    if (!patientId) { setError('Select a patient first'); return; }
-    try {
-      await api.post('/records', { ...form, patientId: Number(patientId) });
-      setForm(emptyForm);
-      setShowForm(false);
-      loadRecords(patientId);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create record');
-    }
+    await axios.post("/records", { ...form, patientId: Number(form.patientId) });
+    setShowForm(false);
+    fetchRecords();
   };
 
   return (
-    <div className="dashboard-page">
-      <Navbar />
-      <main className="dashboard-content">
-        <h1>Medical Records</h1>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-4">Medical Records</h1>
 
-        <div className="form-group">
-          <label htmlFor="patientSelect">Patient</label>
-          <select id="patientSelect" className="input-field" value={patientId} onChange={(e) => setPatientId(e.target.value)}>
-            <option value="">Select patient</option>
-            {patients.map((p) => (
-              <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>
-            ))}
-          </select>
+      <div className="flex gap-2 mb-4">
+        <input placeholder="Enter Patient ID" value={patientId}
+          onChange={e => setPatientId(e.target.value)}
+          className="border border-gray-300 p-2 rounded w-48" />
+        <button onClick={fetchRecords}
+          className="bg-blue-600 text-white px-4 py-2 rounded">Search</button>
+        <button onClick={() => setShowForm(true)}
+          className="bg-green-600 text-white px-4 py-2 rounded">+ Add Record</button>
+      </div>
+
+      <div className="space-y-4">
+        {records.map(r => (
+          <div key={r.id} className="border border-gray-200 rounded p-4 shadow-sm">
+            <div className="flex justify-between mb-2">
+              <span className="font-semibold text-lg">{r.diagnosis}</span>
+              <span className="text-gray-500 text-sm">{r.visitDate}</span>
+            </div>
+            <p><span className="font-medium">Treatment:</span> {r.treatment}</p>
+            <p><span className="font-medium text-blue-600">Rx:</span> {r.prescription}</p>
+            {r.notes && <p className="text-gray-500 italic">{r.notes}</p>}
+          </div>
+        ))}
+      </div>
+
+      {showForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded shadow-lg w-[500px]">
+            <h2 className="text-xl font-bold mb-4">Add Medical Record</h2>
+            <form onSubmit={handleSubmit} className="space-y-3">
+              {[
+                ["patientId","Patient ID"],["diagnosis","Diagnosis"],
+                ["treatment","Treatment"],["prescription","Prescription"],
+                ["notes","Notes"],["visitDate","Visit Date (yyyy-MM-dd)"]
+              ].map(([field, label]) => (
+                <input key={field} placeholder={label} value={form[field]}
+                  onChange={e => setForm({...form, [field]: e.target.value})}
+                  className="border p-2 w-full rounded" />
+              ))}
+              <div className="flex gap-2">
+                <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded">Save</button>
+                <button type="button" onClick={() => setShowForm(false)}
+                  className="bg-gray-300 px-4 py-2 rounded">Cancel</button>
+              </div>
+            </form>
+          </div>
         </div>
-
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-
-        {patientId && (
-          <>
-            <Button label={showForm ? 'Cancel' : 'Add Record'} onClick={() => setShowForm(!showForm)} />
-
-            {showForm && (
-              <form onSubmit={handleSubmit} style={{ margin: '16px 0' }}>
-                <Input label="Visit Date" type="date" name="visitDate" value={form.visitDate} onChange={handleChange} />
-                <Input label="Diagnosis" name="diagnosis" value={form.diagnosis} onChange={handleChange} />
-                <Input label="Treatment" name="treatment" value={form.treatment} onChange={handleChange} />
-                <Input label="Prescription" name="prescription" value={form.prescription} onChange={handleChange} />
-                <Input label="Notes" name="notes" value={form.notes} onChange={handleChange} />
-                <Button label="Save Record" type="submit" />
-              </form>
-            )}
-
-            <table className="data-table">
-              <thead>
-                <tr><th>Date</th><th>Diagnosis</th><th>Treatment</th><th>Prescription</th><th>Notes</th></tr>
-              </thead>
-              <tbody>
-                {records.map((r) => (
-                  <tr key={r.id}>
-                    <td>{r.visitDate}</td><td>{r.diagnosis}</td><td>{r.treatment}</td><td>{r.prescription}</td><td>{r.notes}</td>
-                  </tr>
-                ))}
-                {records.length === 0 && <tr><td colSpan="5">No records yet.</td></tr>}
-              </tbody>
-            </table>
-          </>
-        )}
-      </main>
+      )}
     </div>
   );
-};
-
-export default MedicalRecords;
+}

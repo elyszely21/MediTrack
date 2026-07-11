@@ -1,116 +1,94 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import Navbar from '../components/Navbar';
-import Input from '../components/Input';
-import Button from '../components/Button';
-import api from '../api/axios';
+import { useEffect, useState } from "react";
+import axios from "../api/axios";
 
-const emptyForm = {
-  patientNumber: '', firstName: '', lastName: '', birthDate: '',
-  gender: '', address: '', contactNumber: '', emergencyContact: '',
-};
-
-const Patients = () => {
+export default function Patients() {
   const [patients, setPatients] = useState([]);
-  const [form, setForm] = useState(emptyForm);
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({
+    firstName: "", lastName: "", patientNumber: "",
+    gender: "", birthDate: "", contactNumber: "",
+    emergencyContact: "", address: ""
+  });
 
-  const loadPatients = async () => {
+  const fetchPatients = async () => {
     try {
-      const res = await api.get('/patients');
+      const res = await axios.get("/patients");
       setPatients(res.data);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load patients');
+    } catch (e) {
+      console.error(e);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { loadPatients(); }, []);
-
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  useEffect(() => { fetchPatients(); }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    try {
-      await api.post('/patients', form);
-      setForm(emptyForm);
-      setShowForm(false);
-      loadPatients();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create patient');
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this patient?')) return;
-    try {
-      await api.delete(`/patients/${id}`);
-      loadPatients();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete patient');
-    }
+    await axios.post("/patients", form);
+    setShowForm(false);
+    setForm({ firstName:"",lastName:"",patientNumber:"",gender:"",birthDate:"",contactNumber:"",emergencyContact:"",address:"" });
+    fetchPatients();
   };
 
   return (
-    <div className="dashboard-page">
-      <Navbar />
-      <main className="dashboard-content">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <h1>Patients</h1>
-          <Button label={showForm ? 'Cancel' : 'Add Patient'} onClick={() => setShowForm(!showForm)} />
-        </div>
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">Patients</h1>
+        <button onClick={() => setShowForm(true)}
+          className="bg-blue-600 text-white px-4 py-2 rounded">
+          + Add Patient
+        </button>
+      </div>
 
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-
-        {showForm && (
-          <form onSubmit={handleSubmit} style={{ marginBottom: 24 }}>
-            <Input label="Patient Number" name="patientNumber" value={form.patientNumber} onChange={handleChange} />
-            <Input label="First Name" name="firstName" value={form.firstName} onChange={handleChange} />
-            <Input label="Last Name" name="lastName" value={form.lastName} onChange={handleChange} />
-            <Input label="Birth Date" type="date" name="birthDate" value={form.birthDate} onChange={handleChange} />
-            <Input label="Gender" name="gender" value={form.gender} onChange={handleChange} />
-            <Input label="Address" name="address" value={form.address} onChange={handleChange} />
-            <Input label="Contact Number" name="contactNumber" value={form.contactNumber} onChange={handleChange} />
-            <Input label="Emergency Contact" name="emergencyContact" value={form.emergencyContact} onChange={handleChange} />
-            <Button label="Save Patient" type="submit" />
-          </form>
-        )}
-
-        {loading ? (
-          <p>Loading...</p>
-        ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Patient #</th><th>Name</th><th>Gender</th><th>Contact</th><th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {patients.map((p) => (
-                <tr key={p.id}>
-                  <td>{p.patientNumber}</td>
-                  <td>{p.firstName} {p.lastName}</td>
-                  <td>{p.gender}</td>
-                  <td>{p.contactNumber}</td>
-                  <td>
-                    <Link to={`/records?patientId=${p.id}`}>Records</Link>{' '}
-                    <button className="action-button" onClick={() => handleDelete(p.id)}>Delete</button>
-                  </td>
-                </tr>
+      {loading ? <p>Loading...</p> : (
+        <table className="w-full border-collapse border border-gray-300">
+          <thead className="bg-gray-100">
+            <tr>
+              {["Patient No","Name","Gender","Birth Date","Contact"].map(h => (
+                <th key={h} className="border border-gray-300 p-2 text-left">{h}</th>
               ))}
-              {patients.length === 0 && (
-                <tr><td colSpan="5">No patients yet.</td></tr>
-              )}
-            </tbody>
-          </table>
-        )}
-      </main>
+            </tr>
+          </thead>
+          <tbody>
+            {patients.map(p => (
+              <tr key={p.id} className="hover:bg-gray-50">
+                <td className="border border-gray-300 p-2">{p.patientNumber}</td>
+                <td className="border border-gray-300 p-2">{p.firstName} {p.lastName}</td>
+                <td className="border border-gray-300 p-2">{p.gender}</td>
+                <td className="border border-gray-300 p-2">{p.birthDate}</td>
+                <td className="border border-gray-300 p-2">{p.contactNumber}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      {showForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded shadow-lg w-[500px]">
+            <h2 className="text-xl font-bold mb-4">Add Patient</h2>
+            <form onSubmit={handleSubmit} className="space-y-3">
+              {[
+                ["firstName","First Name"],["lastName","Last Name"],
+                ["patientNumber","Patient Number"],["gender","Gender"],
+                ["birthDate","Birth Date (yyyy-MM-dd)"],["contactNumber","Contact Number"],
+                ["emergencyContact","Emergency Contact"],["address","Address"]
+              ].map(([field, label]) => (
+                <input key={field} placeholder={label} value={form[field]}
+                  onChange={e => setForm({...form, [field]: e.target.value})}
+                  className="border border-gray-300 p-2 w-full rounded" />
+              ))}
+              <div className="flex gap-2">
+                <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">Save</button>
+                <button type="button" onClick={() => setShowForm(false)}
+                  className="bg-gray-300 px-4 py-2 rounded">Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
-};
-
-export default Patients;
+}
