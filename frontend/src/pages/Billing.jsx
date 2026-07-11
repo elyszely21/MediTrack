@@ -1,208 +1,350 @@
-import { useState, useEffect } from 'react';
-import Navbar from '../components/Navbar';
-import Input from '../components/Input';
-import Button from '../components/Button';
-import api from '../api/axios';
+import { useState } from "react";
+import axios from "../api/axios";
 
-const emptyBillForm = { description: '', amount: '', billDate: '' };
-const emptyPaymentForm = { amountPaid: '', paymentDate: '', paymentMethod: '', receivedBy: '' };
+const STATUS_COLORS = {
+  UNPAID:  "bg-red-100 text-red-800",
+  PARTIAL: "bg-yellow-100 text-yellow-800",
+  PAID:    "bg-green-100 text-green-800",
+};
 
-const Billing = () => {
-  const [patients, setPatients] = useState([]);
-  const [patientId, setPatientId] = useState('');
-  const [bills, setBills] = useState([]);
-  const [billForm, setBillForm] = useState(emptyBillForm);
+export default function Billing() {
+  const [bills, setBills]               = useState([]);
+  const [loading, setLoading]           = useState(false);
+  const [error, setError]               = useState("");
+  const [patientId, setPatientId]       = useState("");
+  const [searchedId, setSearchedId]     = useState(null);
   const [showBillForm, setShowBillForm] = useState(false);
-  const [activeBillId, setActiveBillId] = useState(null);
-  const [payments, setPayments] = useState([]);
-  const [paymentForm, setPaymentForm] = useState(emptyPaymentForm);
-  const [error, setError] = useState('');
+  const [deletTarget, setDeleteTarget]  = useState(null);
+  const [paymentTarget, setPaymentTarget] = useState(null);
+  const [payments, setPayments]         = useState([]);
+  const [showPayments, setShowPayments] = useState(null);
 
-  useEffect(() => {
-    api.get('/patients').then((res) => setPatients(res.data)).catch(() => {});
-  }, []);
+  const [billForm, setBillForm] = useState({
+    patientId: "", appointmentId: "",
+    description: "", amount: "", billDate: ""
+  });
+  const [paymentForm, setPaymentForm] = useState({
+    amount: "", method: "CASH", notes: ""
+  });
 
-  const loadBills = async (id) => {
-    if (!id) { setBills([]); return; }
+  const fetchBills = async (pid) => {
+    if (!pid) return;
+    setLoading(true);
+    setError("");
     try {
-      const res = await api.get(`/bills/patient/${id}`);
+      const res = await axios.get(`/bills/patient/${pid}`);
       setBills(res.data);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load bills');
+      setSearchedId(pid);
+    } catch {
+      setError("Failed to load bills.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  useEffect(() => { loadBills(patientId); setActiveBillId(null); setPayments([]); }, [patientId]);
-
-  const handleBillChange = (e) => setBillForm({ ...billForm, [e.target.name]: e.target.value });
+  const fetchPayments = async (billId) => {
+    const res = await axios.get(`/bills/${billId}/payments`);
+    setPayments(res.data);
+    setShowPayments(billId);
+  };
 
   const handleCreateBill = async (e) => {
     e.preventDefault();
-    setError('');
-    if (!patientId) { setError('Select a patient first'); return; }
     try {
-      await api.post('/bills', { ...billForm, patientId: Number(patientId), amount: Number(billForm.amount) });
-      setBillForm(emptyBillForm);
+      await axios.post("/bills", {
+        ...billForm,
+        patientId:     Number(billForm.patientId),
+        appointmentId: billForm.appointmentId ? Number(billForm.appointmentId) : null,
+        amount:        Number(billForm.amount),
+        billDate:      billForm.billDate || new Date().toISOString().split("T")[0],
+      });
       setShowBillForm(false);
-      loadBills(patientId);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create bill');
+      setBillForm({ patientId:"", appointmentId:"", description:"", amount:"", billDate:"" });
+      fetchBills(searchedId);
+    } catch (e) {
+      alert(e.response?.data?.message || "Failed to create bill.");
     }
   };
 
-  const handleDeleteBill = async (id) => {
-    if (!window.confirm('Delete this bill?')) return;
+  const handleDeleteBill = async () => {
     try {
-      await api.delete(`/bills/${id}`);
-      loadBills(patientId);
-      if (activeBillId === id) { setActiveBillId(null); setPayments([]); }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete bill');
+      await axios.delete(`/bills/${deletTarget.id}`);
+      setDeleteTarget(null);
+      fetchBills(searchedId);
+    } catch {
+      alert("Failed to delete bill.");
     }
   };
-
-  const openPayments = async (billId) => {
-    setActiveBillId(billId);
-    setError('');
-    try {
-      const res = await api.get(`/bills/${billId}/payments`);
-      setPayments(res.data);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load payments');
-    }
-  };
-
-  const handlePaymentChange = (e) => setPaymentForm({ ...paymentForm, [e.target.name]: e.target.value });
 
   const handleRecordPayment = async (e) => {
     e.preventDefault();
-    setError('');
     try {
-      await api.post(`/bills/${activeBillId}/payments`, {
+      await axios.post(`/bills/${paymentTarget.id}/payments`, {
         ...paymentForm,
-        amountPaid: Number(paymentForm.amountPaid),
+        amount: Number(paymentForm.amount),
       });
-      setPaymentForm(emptyPaymentForm);
-      openPayments(activeBillId);
-      loadBills(patientId);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to record payment');
+      setPaymentTarget(null);
+      setPaymentForm({ amount:"", method:"CASH", notes:"" });
+      fetchBills(searchedId);
+    } catch (e) {
+      alert(e.response?.data?.message || "Failed to record payment.");
     }
   };
 
-  const handlePrintReceipt = (payment, bill) => {
-    const patient = patients.find((p) => p.id === Number(patientId));
-    const win = window.open('', '_blank');
-    win.document.write(`
-      <html><head><title>Receipt</title>
-      <style>body{font-family:sans-serif;padding:40px;} .line{margin:8px 0;}</style>
-      </head><body>
-      <h2>MediTrack Clinic</h2>
-      <p>Official Receipt</p><hr/>
-      <div class="line"><b>Patient:</b> ${patient ? patient.firstName + ' ' + patient.lastName : ''}</div>
-      <div class="line"><b>Bill:</b> ${bill?.description || ''}</div>
-      <div class="line"><b>Date:</b> ${payment.paymentDate}</div>
-      <div class="line"><b>Amount Paid:</b> ${Number(payment.amountPaid).toFixed(2)}</div>
-      <div class="line"><b>Method:</b> ${payment.paymentMethod || '-'}</div>
-      <div class="line"><b>Received By:</b> ${payment.receivedBy}</div>
-      </body></html>
-    `);
-    win.document.close();
-    win.print();
-  };
-
-  const activeBill = bills.find((b) => b.id === activeBillId);
-
   return (
-    <div className="dashboard-page">
-      <Navbar />
-      <main className="dashboard-content">
-        <h1>Billing</h1>
+    <div className="p-6 max-w-5xl mx-auto">
+      <h1 className="text-2xl font-bold mb-6">Billing</h1>
 
-        <div className="form-group">
-          <label htmlFor="patientSelect">Patient</label>
-          <select id="patientSelect" className="input-field" value={patientId} onChange={(e) => setPatientId(e.target.value)}>
-            <option value="">Select patient</option>
-            {patients.map((p) => (
-              <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>
-            ))}
-          </select>
-        </div>
+      {/* Search bar */}
+      <div className="flex gap-2 mb-6">
+        <input
+          placeholder="Enter Patient ID"
+          value={patientId}
+          onChange={e => setPatientId(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && fetchBills(patientId)}
+          className="border border-gray-300 rounded p-2 w-48 text-sm"
+        />
+        <button onClick={() => fetchBills(patientId)}
+          className="bg-blue-600 text-white px-4 py-2 rounded text-sm">
+          Search
+        </button>
+        {searchedId && (
+          <button onClick={() => {
+            setBillForm({ ...billForm, patientId: searchedId });
+            setShowBillForm(true);
+          }}
+            className="bg-green-600 text-white px-4 py-2 rounded text-sm ml-auto">
+            + Create Bill
+          </button>
+        )}
+      </div>
 
-        {error && <p style={{ color: 'red' }}>{error}</p>}
+      {loading && <p className="text-gray-500">Loading...</p>}
+      {error   && <p className="text-red-500">{error}</p>}
 
-        {patientId && (
-          <>
-            <Button label={showBillForm ? 'Cancel' : 'New Bill'} onClick={() => setShowBillForm(!showBillForm)} />
+      {!loading && bills.length === 0 && searchedId && (
+        <p className="text-gray-400 text-center mt-10">
+          No bills found for Patient #{searchedId}
+        </p>
+      )}
 
-            {showBillForm && (
-              <form onSubmit={handleCreateBill} style={{ margin: '16px 0' }}>
-                <Input label="Description" name="description" value={billForm.description} onChange={handleBillChange} />
-                <Input label="Amount" type="number" name="amount" value={billForm.amount} onChange={handleBillChange} />
-                <Input label="Bill Date" type="date" name="billDate" value={billForm.billDate} onChange={handleBillChange} />
-                <Button label="Save Bill" type="submit" />
-              </form>
-            )}
+      {/* Bills list */}
+      <div className="space-y-4">
+        {bills.map(b => (
+          <div key={b.id}
+            className="border border-gray-200 rounded-lg p-4 shadow-sm bg-white">
+            <div className="flex justify-between items-start mb-3">
+              <div>
+                <p className="font-semibold text-gray-800">{b.description}</p>
+                <p className="text-xs text-gray-400 mt-0.5">Bill Date: {b.billDate}</p>
+              </div>
+              <span className={`px-2 py-0.5 rounded text-xs font-medium
+                ${STATUS_COLORS[b.status] || "bg-gray-100 text-gray-700"}`}>
+                {b.status}
+              </span>
+            </div>
 
-            <table className="data-table">
-              <thead>
-                <tr><th>Date</th><th>Description</th><th>Amount</th><th>Balance</th><th>Status</th><th>Actions</th></tr>
-              </thead>
-              <tbody>
-                {bills.map((b) => (
-                  <tr key={b.id}>
-                    <td>{b.billDate}</td>
-                    <td>{b.description}</td>
-                    <td>{Number(b.amount).toFixed(2)}</td>
-                    <td>{Number(b.balance).toFixed(2)}</td>
-                    <td>{b.status}</td>
-                    <td>
-                      <button className="action-button" onClick={() => openPayments(b.id)}>Payments</button>{' '}
-                      <button className="action-button" onClick={() => handleDeleteBill(b.id)}>Delete</button>
-                    </td>
-                  </tr>
-                ))}
-                {bills.length === 0 && <tr><td colSpan="6">No bills yet.</td></tr>}
-              </tbody>
-            </table>
+            {/* Amount summary */}
+            <div className="grid grid-cols-3 gap-4 mb-3 text-sm">
+              <div className="bg-gray-50 rounded p-3 text-center">
+                <p className="text-gray-500 text-xs">Total Amount</p>
+                <p className="font-bold text-gray-800">₱{Number(b.amount).toFixed(2)}</p>
+              </div>
+              <div className="bg-gray-50 rounded p-3 text-center">
+                <p className="text-gray-500 text-xs">Amount Paid</p>
+                <p className="font-bold text-green-600">
+                  ₱{(Number(b.amount) - Number(b.balance)).toFixed(2)}
+                </p>
+              </div>
+              <div className="bg-gray-50 rounded p-3 text-center">
+                <p className="text-gray-500 text-xs">Balance</p>
+                <p className={`font-bold ${
+                  Number(b.balance) > 0 ? "text-red-600" : "text-green-600"}`}>
+                  ₱{Number(b.balance).toFixed(2)}
+                </p>
+              </div>
+            </div>
 
-            {activeBillId && (
-              <div style={{ marginTop: 24 }}>
-                <h3>Payment History — {activeBill?.description}</h3>
-                {activeBill?.status !== 'PAID' && (
-                  <form onSubmit={handleRecordPayment} style={{ margin: '12px 0' }}>
-                    <Input label={`Amount Paid (balance: ${Number(activeBill?.balance ?? 0).toFixed(2)})`} type="number" name="amountPaid" value={paymentForm.amountPaid} onChange={handlePaymentChange} />
-                    <Input label="Payment Date" type="date" name="paymentDate" value={paymentForm.paymentDate} onChange={handlePaymentChange} />
-                    <Input label="Payment Method" name="paymentMethod" value={paymentForm.paymentMethod} onChange={handlePaymentChange} placeholder="Cash, GCash, etc." />
-                    <Input label="Received By" name="receivedBy" value={paymentForm.receivedBy} onChange={handlePaymentChange} />
-                    <Button label="Record Payment" type="submit" />
-                  </form>
-                )}
+            {/* Actions */}
+            <div className="flex gap-3 text-sm">
+              {b.status !== "PAID" && (
+                <button onClick={() => setPaymentTarget(b)}
+                  className="bg-blue-600 text-white px-3 py-1.5 rounded text-xs">
+                  Record Payment
+                </button>
+              )}
+              <button onClick={() => fetchPayments(b.id)}
+                className="border border-gray-300 px-3 py-1.5 rounded text-xs">
+                View Payments
+              </button>
+              <button onClick={() => setDeleteTarget(b)}
+                className="text-red-500 hover:underline text-xs ml-auto">
+                Delete
+              </button>
+            </div>
 
-                <table className="data-table">
-                  <thead>
-                    <tr><th>Date</th><th>Amount</th><th>Method</th><th>Received By</th><th>Actions</th></tr>
-                  </thead>
-                  <tbody>
-                    {payments.map((p) => (
-                      <tr key={p.id}>
-                        <td>{p.paymentDate}</td>
-                        <td>{Number(p.amountPaid).toFixed(2)}</td>
-                        <td>{p.paymentMethod}</td>
-                        <td>{p.receivedBy}</td>
-                        <td><button className="action-button" onClick={() => handlePrintReceipt(p, activeBill)}>Print Receipt</button></td>
+            {/* Payment history inline */}
+            {showPayments === b.id && (
+              <div className="mt-3 border-t pt-3">
+                <div className="flex justify-between items-center mb-2">
+                  <p className="text-sm font-medium text-gray-600">Payment History</p>
+                  <button onClick={() => setShowPayments(null)}
+                    className="text-xs text-gray-400 hover:text-gray-600">Hide</button>
+                </div>
+                {payments.length === 0 ? (
+                  <p className="text-xs text-gray-400">No payments recorded yet.</p>
+                ) : (
+                  <table className="w-full text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-gray-50">
+                        {["Amount","Method","Notes","Paid At"].map(h => (
+                          <th key={h}
+                            className="border border-gray-200 p-1.5 text-left text-gray-600">
+                            {h}
+                          </th>
+                        ))}
                       </tr>
-                    ))}
-                    {payments.length === 0 && <tr><td colSpan="5">No payments recorded.</td></tr>}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {payments.map(p => (
+                        <tr key={p.id}>
+                          <td className="border border-gray-200 p-1.5 font-medium">
+                            ₱{Number(p.amount).toFixed(2)}
+                          </td>
+                          <td className="border border-gray-200 p-1.5">{p.method || "—"}</td>
+                          <td className="border border-gray-200 p-1.5">{p.notes  || "—"}</td>
+                          <td className="border border-gray-200 p-1.5">
+                            {p.paidAt ? new Date(p.paidAt).toLocaleString() : "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
             )}
-          </>
-        )}
-      </main>
+          </div>
+        ))}
+      </div>
+
+      {/* Create Bill modal */}
+      {showBillForm && (
+        <Modal title="Create Bill" onClose={() => setShowBillForm(false)}>
+          <form onSubmit={handleCreateBill} className="space-y-3">
+            <FormField label="Patient ID *"     field="patientId"
+              form={billForm} setForm={setBillForm} required />
+            <FormField label="Appointment ID"   field="appointmentId"
+              form={billForm} setForm={setBillForm} />
+            <FormField label="Description *"    field="description"
+              form={billForm} setForm={setBillForm} required />
+            <FormField label="Amount *"         field="amount"
+              form={billForm} setForm={setBillForm} type="number" required
+              placeholder="e.g. 500.00" />
+            <FormField label="Bill Date"        field="billDate"
+              form={billForm} setForm={setBillForm} type="date" />
+            <ModalActions onCancel={() => setShowBillForm(false)} submitLabel="Create Bill" />
+          </form>
+        </Modal>
+      )}
+
+      {/* Record Payment modal */}
+      {paymentTarget && (
+        <Modal title={`Record Payment — ${paymentTarget.description}`}
+          onClose={() => setPaymentTarget(null)}>
+          <div className="bg-gray-50 rounded p-3 mb-4 text-sm">
+            <p>Total: <strong>₱{Number(paymentTarget.amount).toFixed(2)}</strong></p>
+            <p>Remaining Balance: <strong className="text-red-600">
+              ₱{Number(paymentTarget.balance).toFixed(2)}
+            </strong></p>
+          </div>
+          <form onSubmit={handleRecordPayment} className="space-y-3">
+            <FormField label="Amount *" field="amount"
+              form={paymentForm} setForm={setPaymentForm}
+              type="number" required placeholder="Enter payment amount" />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Payment Method
+              </label>
+              <select value={paymentForm.method}
+                onChange={e => setPaymentForm({ ...paymentForm, method: e.target.value })}
+                className="border border-gray-300 rounded p-2 w-full text-sm">
+                {["CASH","CARD","GCASH","OTHERS"].map(m => (
+                  <option key={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+            <FormField label="Notes" field="notes"
+              form={paymentForm} setForm={setPaymentForm} />
+            <ModalActions onCancel={() => setPaymentTarget(null)} submitLabel="Record Payment" />
+          </form>
+        </Modal>
+      )}
+
+      {/* Delete confirmation */}
+      {deletTarget && (
+        <Modal title="Confirm Delete" onClose={() => setDeleteTarget(null)}>
+          <p className="text-gray-600 mb-4">
+            Delete bill for <strong>{deletTarget.description}</strong>?
+            All associated payments will also be removed.
+          </p>
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setDeleteTarget(null)}
+              className="px-4 py-2 rounded bg-gray-200 text-sm">Cancel</button>
+            <button onClick={handleDeleteBill}
+              className="px-4 py-2 rounded bg-red-600 text-white text-sm">Delete</button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
-};
+}
 
-export default Billing;
+// ── Shared components ─────────────────────────────────────────────────────────
+
+function FormField({ label, field, form, setForm, type="text",
+                     required=false, placeholder="", multiline=false }) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      {multiline ? (
+        <textarea rows={3} value={form[field]} placeholder={placeholder} required={required}
+          onChange={e => setForm({ ...form, [field]: e.target.value })}
+          className="border border-gray-300 rounded p-2 w-full text-sm" />
+      ) : (
+        <input type={type} value={form[field]} placeholder={placeholder} required={required}
+          onChange={e => setForm({ ...form, [field]: e.target.value })}
+          className="border border-gray-300 rounded p-2 w-full text-sm" />
+      )}
+    </div>
+  );
+}
+
+function Modal({ title, onClose, children }) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center
+      justify-center z-50">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4
+        max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center p-4 border-b">
+          <h2 className="text-lg font-semibold">{title}</h2>
+          <button onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+        </div>
+        <div className="p-4">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function ModalActions({ onCancel, submitLabel }) {
+  return (
+    <div className="flex justify-end gap-2 pt-2">
+      <button type="button" onClick={onCancel}
+        className="px-4 py-2 rounded bg-gray-200 text-sm">Cancel</button>
+      <button type="submit"
+        className="px-4 py-2 rounded bg-blue-600 text-white text-sm">
+        {submitLabel}
+      </button>
+    </div>
+  );
+}
