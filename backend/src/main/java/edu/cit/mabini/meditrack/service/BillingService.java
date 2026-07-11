@@ -22,14 +22,17 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BillingService {
 
-    private final BillRepository billRepository;
-    private final PaymentRepository paymentRepository;
-    private final PatientRepository patientRepository;
+    private final BillRepository        billRepository;
+    private final PaymentRepository     paymentRepository;
+    private final PatientRepository     patientRepository;
     private final AppointmentRepository appointmentRepository;
+    private final AuditLogService       auditLogService;
 
     public List<BillDto> getBillsByPatient(Long patientId) {
-        return billRepository.findByPatientId(patientId).stream()
-                .map(this::toDto).collect(Collectors.toList());
+        return billRepository.findByPatientId(patientId)
+                .stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
     }
 
     public BillDto createBill(BillDto dto) {
@@ -52,19 +55,41 @@ public class BillingService {
                 .billDate(dto.getBillDate())
                 .build();
 
-        return toDto(billRepository.save(bill));
+        Bill saved = billRepository.save(bill);
+
+        auditLogService.log(
+            "CREATED",
+            "Bill",
+            String.valueOf(saved.getId()),
+            "Bill created for patient: "
+                + patient.getFirstName() + " " + patient.getLastName()
+                + " — " + saved.getDescription()
+                + " ₱" + saved.getAmount()
+        );
+
+        return toDto(saved);
     }
 
     public void deleteBill(Long id) {
         if (!billRepository.existsById(id)) {
             throw new IllegalArgumentException("Bill not found");
         }
+
+        auditLogService.log(
+            "DELETED",
+            "Bill",
+            String.valueOf(id),
+            "Bill removed"
+        );
+
         billRepository.deleteById(id);
     }
 
     public List<PaymentDto> getPayments(Long billId) {
-        return paymentRepository.findByBillIdOrderByPaymentDateAsc(billId).stream()
-                .map(this::toDto).collect(Collectors.toList());
+        return paymentRepository.findByBillIdOrderByPaymentDateAsc(billId)
+                .stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
     }
 
     @Transactional
@@ -73,7 +98,9 @@ public class BillingService {
                 .orElseThrow(() -> new IllegalArgumentException("Bill not found"));
 
         if (dto.getAmountPaid().compareTo(bill.getBalance()) > 0) {
-            throw new IllegalArgumentException("Payment exceeds remaining balance of " + bill.getBalance());
+            throw new IllegalArgumentException(
+                "Payment exceeds remaining balance of " + bill.getBalance()
+            );
         }
 
         Payment payment = Payment.builder()
@@ -83,12 +110,24 @@ public class BillingService {
                 .paymentMethod(dto.getPaymentMethod())
                 .receivedBy(dto.getReceivedBy())
                 .build();
+
         Payment saved = paymentRepository.save(payment);
 
         BigDecimal newBalance = bill.getBalance().subtract(dto.getAmountPaid());
         bill.setBalance(newBalance);
-        bill.setStatus(newBalance.compareTo(BigDecimal.ZERO) == 0 ? "PAID" : "PARTIALLY_PAID");
+        bill.setStatus(
+            newBalance.compareTo(BigDecimal.ZERO) == 0 ? "PAID" : "PARTIALLY_PAID"
+        );
         billRepository.save(bill);
+
+        auditLogService.log(
+            "PAYMENT",
+            "Bill",
+            String.valueOf(billId),
+            "Payment of ₱" + dto.getAmountPaid()
+                + " recorded via " + dto.getPaymentMethod()
+                + " — remaining balance: ₱" + newBalance
+        );
 
         return toDto(saved);
     }
@@ -97,7 +136,10 @@ public class BillingService {
         return BillDto.builder()
                 .id(bill.getId())
                 .patientId(bill.getPatient().getId())
-                .appointmentId(bill.getAppointment() != null ? bill.getAppointment().getId() : null)
+                .appointmentId(
+                    bill.getAppointment() != null
+                        ? bill.getAppointment().getId() : null
+                )
                 .description(bill.getDescription())
                 .amount(bill.getAmount())
                 .balance(bill.getBalance())
