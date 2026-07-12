@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import Layout from "../components/Layout";
 import axios from "../api/axios";
-import Navbar from '../components/Navbar';
 
 const STATUS_COLORS = {
   UNPAID:        "bg-red-100 text-red-800",
@@ -113,7 +114,7 @@ export default function Billing() {
   };
 
   return (
-    <>
+    <Layout>
       {/* ── Print styles ─────────────────────────────────────────────────── */}
       <style>{`
         @media print {
@@ -557,7 +558,7 @@ export default function Billing() {
           </Modal>
         )}
       </div>
-    </>
+    </Layout>
   );
 }
 

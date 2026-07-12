@@ -19,20 +19,20 @@ public class DoctorController {
     private final DoctorService doctorService;
 
     @GetMapping
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     public ResponseEntity<List<DoctorDto>> getAllDoctors() {
         return ResponseEntity.ok(doctorService.getAllDoctors());
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     public ResponseEntity<DoctorDto> registerDoctor(
             @Valid @RequestBody RegisterDoctorRequest request) {
         return ResponseEntity.status(201).body(doctorService.registerDoctor(request));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     public ResponseEntity<DoctorDto> updateDoctor(
             @PathVariable Long id,
             @Valid @RequestBody RegisterDoctorRequest request) {
@@ -40,7 +40,7 @@ public class DoctorController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     public ResponseEntity<Void> deleteDoctor(@PathVariable Long id) {
         doctorService.deleteDoctor(id);
         return ResponseEntity.noContent().build();

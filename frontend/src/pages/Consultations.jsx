@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import Layout from "../components/Layout";
 import axios from "../api/axios";
-import Navbar from '../components/Navbar';
+
 export default function Consultations() {
   const [consultations, setConsultations] = useState([]);
   const [loading, setLoading]             = useState(false);
@@ -123,6 +125,7 @@ export default function Consultations() {
   );
 
   return (
+    <Layout>
     <div className="p-6 max-w-5xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">Consultations</h1>
 
@@ -254,6 +257,7 @@ export default function Consultations() {
         </Modal>
       )}
     </div>
+    </Layout>
   );
 }
 

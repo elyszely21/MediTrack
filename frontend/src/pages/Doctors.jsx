@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import Layout from "../components/Layout";
 import axios from "../api/axios";
-import Navbar from '../components/Navbar';
 
 export default function Doctors() {
   const [doctors, setDoctors]         = useState([]);
@@ -85,6 +86,7 @@ export default function Doctors() {
   ];
 
   return (
+    <Layout>
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <div>
@@ -240,6 +242,7 @@ export default function Doctors() {
         </Modal>
       )}
     </div>
+    </Layout>
   );
 }
 
