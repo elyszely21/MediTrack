@@ -56,7 +56,7 @@ public class UserService {
     // ── Get all nurses ────────────────────────────────────────────────────────
 
     public List<User> getAllNurses() {
-        return userRepository.findByRole("ROLE_NURSE");
+        return userRepository.findByRole("NURSE");
     }
 
     // ── Delete user ───────────────────────────────────────────────────────────

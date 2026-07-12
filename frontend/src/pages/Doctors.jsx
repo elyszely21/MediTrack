@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "../api/axios";
+import Navbar from '../components/Navbar';
 
 export default function Doctors() {
   const [doctors, setDoctors]         = useState([]);

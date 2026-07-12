@@ -1,5 +1,6 @@
 import { useState } from "react";
 import axios from "../api/axios";
+import Navbar from '../components/Navbar';
 
 const STATUS_COLORS = {
   UNPAID:        "bg-red-100 text-red-800",

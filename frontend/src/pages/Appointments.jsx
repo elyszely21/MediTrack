@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import axios from "../api/axios";
+import Navbar from '../components/Navbar';
 
 const STATUS_CONFIG = {
   PENDING:   { bg: "bg-yellow-100", text: "text-yellow-800", label: "Pending" },

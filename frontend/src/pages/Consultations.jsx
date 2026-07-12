@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "../api/axios";
-
+import Navbar from '../components/Navbar';
 export default function Consultations() {
   const [consultations, setConsultations] = useState([]);
   const [loading, setLoading]             = useState(false);

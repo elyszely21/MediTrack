@@ -70,7 +70,7 @@ public class AuthController {
                         .body(Map.of("message", "Only SUPER_ADMIN can register nurses"));
             }
 
-            request.setRole("ROLE_NURSE");
+            request.setRole("NURSE");
             LoginResponse response = authenticationService.register(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (IllegalArgumentException ex) {
@@ -91,7 +91,7 @@ public class AuthController {
                         .body(Map.of("message", "Only SUPER_ADMIN can register doctors"));
             }
 
-            request.setRole("ROLE_DOCTOR");
+            request.setRole("DOCTOR");
             LoginResponse response = authenticationService.register(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (IllegalArgumentException ex) {

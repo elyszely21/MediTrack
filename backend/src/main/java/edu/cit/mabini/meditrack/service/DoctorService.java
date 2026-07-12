@@ -22,7 +22,7 @@ public class DoctorService {
     // ── Get all doctors ───────────────────────────────────────────────────────
 
     public List<DoctorDto> getAllDoctors() {
-        return userRepository.findByRole("ROLE_DOCTOR")
+        return userRepository.findByRole("DOCTOR")
                 .stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
@@ -40,7 +40,7 @@ public class DoctorService {
                 .email(request.getEmail())
                 .phoneNumber(request.getPhoneNumber())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role("ROLE_DOCTOR")
+                .role("DOCTOR")
                 .specialization(request.getSpecialization())
                 .licenseNumber(request.getLicenseNumber())
                 .build();
@@ -64,7 +64,7 @@ public class DoctorService {
         User doctor = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Doctor not found"));
 
-        if (!doctor.getRole().equals("ROLE_DOCTOR")) {
+        if (!doctor.getRole().equals("DOCTOR")) {
             throw new IllegalArgumentException("User is not a doctor");
         }
 
@@ -95,7 +95,7 @@ public class DoctorService {
         User doctor = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Doctor not found"));
 
-        if (!doctor.getRole().equals("ROLE_DOCTOR")) {
+        if (!doctor.getRole().equals("DOCTOR")) {
             throw new IllegalArgumentException("User is not a doctor");
         }
 
