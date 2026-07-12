@@ -38,11 +38,17 @@ public class Patient {
 
     private String emergencyContact;
 
+    @Builder.Default
+    private Boolean archived = false;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @PrePersist
     public void prePersist() {
         this.createdAt = LocalDateTime.now();
+        if (this.archived == null) {
+            this.archived = false;
+        }
     }
 }
