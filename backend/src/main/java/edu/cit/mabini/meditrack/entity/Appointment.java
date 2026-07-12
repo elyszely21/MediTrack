@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 @Entity
@@ -27,7 +28,19 @@ public class Appointment {
 
     private LocalTime appointmentTime;
 
-    private String status;
+    @Builder.Default
+    private String status = "PENDING";
 
     private String remarks;
+
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @PrePersist
+    public void prePersist() {
+        this.createdAt = LocalDateTime.now();
+        if (this.status == null || this.status.isBlank()) {
+            this.status = "PENDING";
+        }
+    }
 }
