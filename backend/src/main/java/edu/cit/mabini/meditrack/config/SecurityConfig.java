@@ -61,6 +61,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/reports/**").hasRole("SUPER_ADMIN")
                 .requestMatchers("/api/auth/admin/**").hasRole("SUPER_ADMIN")
                 .requestMatchers("/api/users/**").hasRole("SUPER_ADMIN")
+                .requestMatchers("/api/patient-portal/**").hasRole("PATIENT")
                 .requestMatchers(
                     "/api/patients/**",
                     "/api/records/**",

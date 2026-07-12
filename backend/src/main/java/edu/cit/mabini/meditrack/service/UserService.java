@@ -1,7 +1,9 @@
 package edu.cit.mabini.meditrack.service;
 
 import edu.cit.mabini.meditrack.dto.RegisterRequest;
+import edu.cit.mabini.meditrack.entity.Patient;
 import edu.cit.mabini.meditrack.entity.User;
+import edu.cit.mabini.meditrack.repository.PatientRepository;
 import edu.cit.mabini.meditrack.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -14,9 +16,10 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class UserService {
 
-    private final UserRepository  userRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final AuditLogService auditLogService;
+    private final UserRepository    userRepository;
+    private final PatientRepository patientRepository;
+    private final PasswordEncoder   passwordEncoder;
+    private final AuditLogService   auditLogService;
 
     public User register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail().trim().toLowerCase())) {
@@ -46,7 +49,56 @@ public class UserService {
                 + " — Role: " + saved.getRole()
         );
 
+        // Public self-registration is always PATIENT — give every patient
+        // account its own row in the patients table (that's what feeds
+        // appointments, prescriptions, medical records, etc.) instead of
+        // leaving them as a bare login with nothing clinical attached.
+        if ("PATIENT".equalsIgnoreCase(saved.getRole())) {
+            createLinkedPatientProfile(saved);
+        }
+
         return saved;
+    }
+
+    private void createLinkedPatientProfile(User user) {
+        if (patientRepository.existsByUserId(user.getId())) {
+            return;
+        }
+
+        String fullName = user.getFullName().trim();
+        String firstName = fullName;
+        String lastName = "-";
+        int spaceIdx = fullName.indexOf(' ');
+        if (spaceIdx > 0) {
+            firstName = fullName.substring(0, spaceIdx).trim();
+            String rest = fullName.substring(spaceIdx + 1).trim();
+            if (!rest.isBlank()) {
+                lastName = rest;
+            }
+        }
+
+        Patient patient = Patient.builder()
+                .user(user)
+                .patientNumber(generatePatientNumber(user.getId()))
+                .firstName(firstName)
+                .lastName(lastName)
+                .contactNumber(user.getPhoneNumber())
+                .build();
+
+        Patient saved = patientRepository.save(patient);
+
+        auditLogService.log(
+            "CREATED",
+            "Patient",
+            String.valueOf(saved.getId()),
+            "Patient profile auto-created for new account: "
+                + saved.getFirstName() + " " + saved.getLastName()
+                + " (" + saved.getPatientNumber() + ")"
+        );
+    }
+
+    private String generatePatientNumber(Long userId) {
+        return "PT-" + String.format("%05d", userId);
     }
 
     public Optional<User> findUserByEmail(String email) {
