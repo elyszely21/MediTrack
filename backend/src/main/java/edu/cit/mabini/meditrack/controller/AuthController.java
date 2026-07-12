@@ -28,6 +28,10 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
         try {
+            // Always PATIENT — never trust the client to pick its own role.
+            // Nurse/Doctor accounts can only be created by an admin via
+            // the /admin/register-* endpoints below.
+            request.setRole("PATIENT");
             LoginResponse response = authenticationService.register(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (IllegalArgumentException ex) {

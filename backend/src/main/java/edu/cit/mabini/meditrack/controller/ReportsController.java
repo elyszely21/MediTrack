@@ -15,7 +15,8 @@ public class ReportsController {
     private final ReportsService reportsService;
 
     @GetMapping("/summary")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    
     public ResponseEntity<DashboardSummaryDto> getSummary() {
         return ResponseEntity.ok(reportsService.getSummary());
     }

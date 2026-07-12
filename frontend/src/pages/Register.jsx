@@ -43,7 +43,7 @@ const Register = () => {
       if (data.role === 'SUPER_ADMIN') {
         navigate('/admin/dashboard');
       } else {
-        navigate('/nurse/dashboard');
+        navigate('/patient/dashboard');
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed.');

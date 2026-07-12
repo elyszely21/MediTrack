@@ -33,6 +33,8 @@ const Login = () => {
         navigate('/admin/dashboard');
       } else if (data.role === 'DOCTOR') {
         navigate('/doctor/dashboard');
+      } else if (data.role === 'PATIENT') {
+        navigate('/patient/dashboard');
       } else {
         navigate('/nurse/dashboard');
       }

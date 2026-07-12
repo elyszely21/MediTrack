@@ -58,6 +58,18 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/login",
                                  "/api/auth/register").permitAll()
+                .requestMatchers("/api/reports/**").hasRole("SUPER_ADMIN")
+                .requestMatchers("/api/auth/admin/**").hasRole("SUPER_ADMIN")
+                .requestMatchers("/api/users/**").hasRole("SUPER_ADMIN")
+                .requestMatchers(
+                    "/api/patients/**",
+                    "/api/records/**",
+                    "/api/appointments/**",
+                    "/api/bills/**",
+                    "/api/prescriptions/**",
+                    "/api/consultations/**",
+                    "/api/doctors/**"
+                ).hasAnyRole("SUPER_ADMIN", "NURSE", "DOCTOR")
                 .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider())
