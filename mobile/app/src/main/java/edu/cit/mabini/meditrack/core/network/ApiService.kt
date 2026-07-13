@@ -1,6 +1,12 @@
-package edu.cit.mabini.meditrack.api
+package edu.cit.mabini.meditrack.core.network
 
 import edu.cit.mabini.meditrack.model.*
+import edu.cit.mabini.meditrack.feature.medicalrecords.data.model.MedicalRecordDto
+import edu.cit.mabini.meditrack.feature.appointments.data.model.AppointmentDto
+import edu.cit.mabini.meditrack.feature.patients.data.model.PatientDto
+import edu.cit.mabini.meditrack.feature.auth.RegisterRequest
+import edu.cit.mabini.meditrack.feature.auth.LoginResponse
+import edu.cit.mabini.meditrack.feature.auth.LoginRequest
 import retrofit2.Response
 import retrofit2.http.*
 

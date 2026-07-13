@@ -1,4 +1,4 @@
-package edu.cit.mabini.meditrack.model
+package edu.cit.mabini.meditrack.feature.auth
 
 data class LoginResponse(
     val success: Boolean,

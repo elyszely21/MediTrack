@@ -1,4 +1,4 @@
-package edu.cit.mabini.meditrack.screens
+package edu.cit.mabini.meditrack.feature.profile
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -10,7 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import edu.cit.mabini.meditrack.viewmodel.AuthViewModel
+import edu.cit.mabini.meditrack.feature.auth.AuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

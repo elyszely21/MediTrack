@@ -1,7 +1,7 @@
-package edu.cit.mabini.meditrack.repository
+package edu.cit.mabini.meditrack.feature.appointments
 
-import edu.cit.mabini.meditrack.api.ApiService
-import edu.cit.mabini.meditrack.model.AppointmentDto
+import edu.cit.mabini.meditrack.core.network.ApiService
+import edu.cit.mabini.meditrack.feature.appointments.data.model.AppointmentDto
 import retrofit2.Response
 
 class AppointmentRepository(private val api: ApiService) {

@@ -1,7 +1,7 @@
-package edu.cit.mabini.meditrack.api
+package edu.cit.mabini.meditrack.core.network
 
 import android.content.Context
-import edu.cit.mabini.meditrack.session.SessionManager
+import edu.cit.mabini.meditrack.core.session.SessionManager
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor

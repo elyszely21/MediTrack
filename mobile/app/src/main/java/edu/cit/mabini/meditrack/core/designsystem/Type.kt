@@ -1,4 +1,4 @@
-package edu.cit.mabini.meditrack.ui.theme
+package edu.cit.mabini.meditrack.core.designsystem
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle

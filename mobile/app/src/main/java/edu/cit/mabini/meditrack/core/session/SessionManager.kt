@@ -1,8 +1,8 @@
-package edu.cit.mabini.meditrack.session
+package edu.cit.mabini.meditrack.core.session
 
 import android.content.Context
 import android.content.SharedPreferences
-import edu.cit.mabini.meditrack.model.LoginResponse
+import edu.cit.mabini.meditrack.feature.auth.LoginResponse
 
 class SessionManager(context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("meditrack_session", Context.MODE_PRIVATE)

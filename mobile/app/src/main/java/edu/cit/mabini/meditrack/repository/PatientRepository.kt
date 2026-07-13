@@ -1,7 +1,7 @@
-package edu.cit.mabini.meditrack.repository
+package edu.cit.mabini.meditrack.feature.patients
 
-import edu.cit.mabini.meditrack.api.ApiService
-import edu.cit.mabini.meditrack.model.PatientDto
+import edu.cit.mabini.meditrack.core.network.ApiService
+import edu.cit.mabini.meditrack.feature.patients.data.model.PatientDto
 import retrofit2.Response
 
 class PatientRepository(private val api: ApiService) {

@@ -1,10 +1,10 @@
-package edu.cit.mabini.meditrack.viewmodel
+package edu.cit.mabini.meditrack.feature.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import edu.cit.mabini.meditrack.model.LoginResponse
-import edu.cit.mabini.meditrack.repository.AuthRepository
-import edu.cit.mabini.meditrack.session.SessionManager
+import edu.cit.mabini.meditrack.feature.auth.LoginResponse
+import edu.cit.mabini.meditrack.feature.auth.AuthRepository
+import edu.cit.mabini.meditrack.core.session.SessionManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

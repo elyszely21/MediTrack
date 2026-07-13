@@ -1,9 +1,9 @@
-package edu.cit.mabini.meditrack.viewmodel
+package edu.cit.mabini.meditrack.feature.appointments
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import edu.cit.mabini.meditrack.model.AppointmentDto
-import edu.cit.mabini.meditrack.repository.AppointmentRepository
+import edu.cit.mabini.meditrack.feature.appointments.data.model.AppointmentDto
+import edu.cit.mabini.meditrack.feature.appointments.AppointmentRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

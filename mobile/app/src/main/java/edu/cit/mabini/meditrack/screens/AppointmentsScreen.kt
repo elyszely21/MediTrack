@@ -1,4 +1,4 @@
-package edu.cit.mabini.meditrack.screens
+package edu.cit.mabini.meditrack.feature.appointments
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -20,10 +20,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import edu.cit.mabini.meditrack.model.AppointmentDto
+import edu.cit.mabini.meditrack.feature.appointments.data.model.AppointmentDto
 import edu.cit.mabini.meditrack.viewmodel.AppointmentActionState
 import edu.cit.mabini.meditrack.viewmodel.AppointmentUiState
-import edu.cit.mabini.meditrack.viewmodel.AppointmentViewModel
+import edu.cit.mabini.meditrack.feature.appointments.AppointmentViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

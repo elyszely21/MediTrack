@@ -1,4 +1,4 @@
-package edu.cit.mabini.meditrack.screens
+package edu.cit.mabini.meditrack.feature.dashboard
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -13,7 +13,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import edu.cit.mabini.meditrack.viewmodel.AuthViewModel
+import edu.cit.mabini.meditrack.feature.auth.AuthViewModel
 
 @Composable
 fun DashboardScreen(

@@ -1,4 +1,4 @@
-package edu.cit.mabini.meditrack.screens
+package edu.cit.mabini.meditrack.feature.medicalrecords
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,10 +18,10 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import edu.cit.mabini.meditrack.model.MedicalRecordDto
+import edu.cit.mabini.meditrack.feature.medicalrecords.data.model.MedicalRecordDto
 import edu.cit.mabini.meditrack.viewmodel.RecordActionState
 import edu.cit.mabini.meditrack.viewmodel.RecordUiState
-import edu.cit.mabini.meditrack.viewmodel.MedicalRecordViewModel
+import edu.cit.mabini.meditrack.feature.medicalrecords.MedicalRecordViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 

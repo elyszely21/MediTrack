@@ -1,4 +1,4 @@
-package edu.cit.mabini.meditrack.screens
+package edu.cit.mabini.meditrack.feature.patients
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -22,10 +22,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import edu.cit.mabini.meditrack.model.PatientDto
+import edu.cit.mabini.meditrack.feature.patients.data.model.PatientDto
 import edu.cit.mabini.meditrack.viewmodel.PatientActionState
 import edu.cit.mabini.meditrack.viewmodel.PatientUiState
-import edu.cit.mabini.meditrack.viewmodel.PatientViewModel
+import edu.cit.mabini.meditrack.feature.patients.PatientViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

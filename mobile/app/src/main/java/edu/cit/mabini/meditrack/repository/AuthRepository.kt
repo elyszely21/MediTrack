@@ -1,9 +1,9 @@
-package edu.cit.mabini.meditrack.repository
+package edu.cit.mabini.meditrack.feature.auth
 
-import edu.cit.mabini.meditrack.api.ApiService
-import edu.cit.mabini.meditrack.model.LoginRequest
-import edu.cit.mabini.meditrack.model.LoginResponse
-import edu.cit.mabini.meditrack.model.RegisterRequest
+import edu.cit.mabini.meditrack.core.network.ApiService
+import edu.cit.mabini.meditrack.feature.auth.LoginRequest
+import edu.cit.mabini.meditrack.feature.auth.LoginResponse
+import edu.cit.mabini.meditrack.feature.auth.RegisterRequest
 import retrofit2.Response
 
 class AuthRepository(private val api: ApiService) {

@@ -1,9 +1,9 @@
-package edu.cit.mabini.meditrack.viewmodel
+package edu.cit.mabini.meditrack.feature.patients
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import edu.cit.mabini.meditrack.model.PatientDto
-import edu.cit.mabini.meditrack.repository.PatientRepository
+import edu.cit.mabini.meditrack.feature.patients.data.model.PatientDto
+import edu.cit.mabini.meditrack.feature.patients.PatientRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

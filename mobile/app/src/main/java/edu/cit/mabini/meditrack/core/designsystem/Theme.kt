@@ -1,4 +1,4 @@
-package edu.cit.mabini.meditrack.ui.theme
+package edu.cit.mabini.meditrack.core.designsystem
 
 import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme

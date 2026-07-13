@@ -1,4 +1,4 @@
-package edu.cit.mabini.meditrack.navigation
+package edu.cit.mabini.meditrack.core.navigation
 
 import android.content.Context
 import androidx.compose.runtime.Composable
@@ -8,11 +8,27 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import edu.cit.mabini.meditrack.api.RetrofitClient
+import edu.cit.mabini.meditrack.core.network.RetrofitClient
 import edu.cit.mabini.meditrack.repository.*
+import edu.cit.mabini.meditrack.feature.medicalrecords.MedicalRecordRepository
+import edu.cit.mabini.meditrack.feature.appointments.AppointmentRepository
+import edu.cit.mabini.meditrack.feature.patients.PatientRepository
+import edu.cit.mabini.meditrack.feature.auth.AuthRepository
 import edu.cit.mabini.meditrack.screens.*
-import edu.cit.mabini.meditrack.session.SessionManager
+import edu.cit.mabini.meditrack.feature.medicalrecords.MedicalRecordsScreen
+import edu.cit.mabini.meditrack.feature.appointments.AppointmentsScreen
+import edu.cit.mabini.meditrack.feature.patients.PatientsScreen
+import edu.cit.mabini.meditrack.feature.profile.ProfileScreen
+import edu.cit.mabini.meditrack.feature.dashboard.DashboardScreen
+import edu.cit.mabini.meditrack.feature.auth.RegisterNurseScreen
+import edu.cit.mabini.meditrack.feature.auth.RegisterScreen
+import edu.cit.mabini.meditrack.feature.auth.LoginScreen
+import edu.cit.mabini.meditrack.core.session.SessionManager
 import edu.cit.mabini.meditrack.viewmodel.*
+import edu.cit.mabini.meditrack.feature.medicalrecords.MedicalRecordViewModel
+import edu.cit.mabini.meditrack.feature.appointments.AppointmentViewModel
+import edu.cit.mabini.meditrack.feature.patients.PatientViewModel
+import edu.cit.mabini.meditrack.feature.auth.AuthViewModel
 
 @Composable
 fun AppNavigation(context: Context) {
