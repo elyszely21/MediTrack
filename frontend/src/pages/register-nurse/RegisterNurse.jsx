@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../api/axios';
-import Input from '../components/Input';
-import Button from '../components/Button';
-import Navbar from '../components/Navbar';
+import api from '../../shared/api/axios';
+import Input from '../../shared/ui/Input';
+import Button from '../../shared/ui/Button';
+import Navbar from '../../widgets/navbar/Navbar';
 
 const RegisterNurse = () => {
   const navigate = useNavigate();

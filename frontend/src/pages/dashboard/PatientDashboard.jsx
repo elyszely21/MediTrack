@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
-import Navbar from '../components/Navbar';
-import api from '../api/axios';
+import Navbar from '../../widgets/navbar/Navbar';
+import api from '../../shared/api/axios';
 
 const APPOINTMENT_STATUS_COLORS = {
   PENDING:   'bg-yellow-100 text-yellow-800',

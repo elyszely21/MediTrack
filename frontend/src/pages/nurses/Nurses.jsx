@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import Layout from "../components/Layout";
-import axios from "../api/axios";
+import Layout from "../../widgets/layout/Layout";
+import axios from "../../shared/api/axios";
 
 export default function Nurses() {
   const user    = JSON.parse(localStorage.getItem("meditrackUser") || "{}");

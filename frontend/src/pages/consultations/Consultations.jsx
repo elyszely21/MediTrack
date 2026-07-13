@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import Layout from "../components/Layout";
-import axios from "../api/axios";
+import Layout from "../../widgets/layout/Layout";
+import axios from "../../shared/api/axios";
 
 export default function Consultations() {
   const [consultations, setConsultations] = useState([]);

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import Layout from "../components/Layout";
-import axios from "../api/axios";
+import Layout from "../../widgets/layout/Layout";
+import axios from "../../shared/api/axios";
 
 const STATUS_COLORS = {
   ACTIVE:    "bg-green-100 text-green-800",
