@@ -1,5 +1,6 @@
 package edu.cit.mabini.meditrack.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -19,9 +20,15 @@ public class Patient {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", unique = true)
-    private User user;
+    // Login credentials live directly on Patient now — a self-registered
+    // patient is their own account, not a row in the staff "users" table.
+    // Both are nullable because patients added manually by staff (walk-ins,
+    // phone bookings) have no portal login at all.
+    @Column(unique = true)
+    private String email;
+
+    @JsonIgnore
+    private String password;
 
     @Column(nullable = false, unique = true)
     private String patientNumber;

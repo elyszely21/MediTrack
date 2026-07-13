@@ -45,8 +45,5 @@ public class User {
     @PrePersist
     public void prePersist() {
         this.createdAt = LocalDateTime.now();
-        if (this.role == null || this.role.isBlank()) {
-            this.role = "PATIENT";
-        }
     }
 }

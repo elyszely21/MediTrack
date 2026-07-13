@@ -1,9 +1,12 @@
 package edu.cit.mabini.meditrack.service;
 
 import edu.cit.mabini.meditrack.dto.PatientDto;
+import edu.cit.mabini.meditrack.dto.RegisterRequest;
 import edu.cit.mabini.meditrack.entity.Patient;
 import edu.cit.mabini.meditrack.repository.PatientRepository;
+import edu.cit.mabini.meditrack.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -14,7 +17,65 @@ import java.util.stream.Collectors;
 public class PatientService {
 
     private final PatientRepository patientRepository;
+    private final UserRepository    userRepository;
+    private final PasswordEncoder   passwordEncoder;
     private final AuditLogService   auditLogService;
+
+    // ── Public self-registration ─────────────────────────────────────────────
+    // This is what /api/auth/register calls. A registering patient lands
+    // directly in the patients table with their own login credentials —
+    // never in the staff "users" table.
+    public Patient registerSelf(RegisterRequest request) {
+        String email = request.getEmail().trim().toLowerCase();
+
+        // Keep emails unique across both account tables so login lookup
+        // (which checks users first, then patients) is never ambiguous.
+        if (patientRepository.existsByEmail(email) || userRepository.existsByEmail(email)) {
+            throw new IllegalArgumentException("Email already registered");
+        }
+
+        if (!request.getPassword().equals(request.getConfirmPassword())) {
+            throw new IllegalArgumentException("Passwords do not match");
+        }
+
+        String fullName = request.getFullName().trim();
+        String firstName = fullName;
+        String lastName = "-";
+        int spaceIdx = fullName.indexOf(' ');
+        if (spaceIdx > 0) {
+            firstName = fullName.substring(0, spaceIdx).trim();
+            String rest = fullName.substring(spaceIdx + 1).trim();
+            if (!rest.isBlank()) {
+                lastName = rest;
+            }
+        }
+
+        // patientNumber has a NOT NULL + UNIQUE constraint and we want it
+        // derived from the row's own id, so save once with a temporary
+        // placeholder, then update it now that an id exists.
+        Patient patient = Patient.builder()
+                .email(email)
+                .password(passwordEncoder.encode(request.getPassword()))
+                .patientNumber("PT-PENDING-" + java.util.UUID.randomUUID().toString().substring(0, 8))
+                .firstName(firstName)
+                .lastName(lastName)
+                .contactNumber(request.getPhoneNumber().trim())
+                .build();
+
+        Patient saved = patientRepository.save(patient);
+        saved.setPatientNumber(String.format("PT-%05d", saved.getId()));
+        saved = patientRepository.save(saved);
+
+        auditLogService.log(
+            "CREATED",
+            "Patient",
+            String.valueOf(saved.getId()),
+            "Patient self-registered: " + saved.getFirstName() + " " + saved.getLastName()
+                + " (" + saved.getPatientNumber() + ")"
+        );
+
+        return saved;
+    }
 
     public List<PatientDto> findAllPatients() {
         return patientRepository.findAll()

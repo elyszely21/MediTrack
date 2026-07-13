@@ -10,7 +10,6 @@ import java.util.Optional;
 public interface PatientRepository extends JpaRepository<Patient, Long> {
     Optional<Patient> findByPatientNumber(String patientNumber);
     boolean existsByPatientNumber(String patientNumber);
-    Optional<Patient> findByUser_Email(String email);
-    Optional<Patient> findByUserId(Long userId);
-    boolean existsByUserId(Long userId);
+    Optional<Patient> findByEmail(String email);
+    boolean existsByEmail(String email);
 }

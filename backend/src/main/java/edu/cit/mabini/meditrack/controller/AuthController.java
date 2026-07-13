@@ -4,7 +4,6 @@ import edu.cit.mabini.meditrack.dto.LoginRequest;
 import edu.cit.mabini.meditrack.dto.LoginResponse;
 import edu.cit.mabini.meditrack.dto.RegisterRequest;
 import edu.cit.mabini.meditrack.service.AuthenticationService;
-import edu.cit.mabini.meditrack.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -21,18 +20,13 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthenticationService authenticationService;
-    private final UserService           userService;
 
-    // ── Public register ───────────────────────────────────────────────────────
+    // ── Public register — always creates a Patient, never a User ───────────
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
         try {
-            // Always PATIENT — never trust the client to pick its own role.
-            // Nurse/Doctor accounts can only be created by an admin via
-            // the /admin/register-* endpoints below.
-            request.setRole("PATIENT");
-            LoginResponse response = authenticationService.register(request);
+            LoginResponse response = authenticationService.registerPatient(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -62,7 +56,7 @@ public class AuthController {
         );
     }
 
-    // ── Register Nurse (SUPER_ADMIN only) ─────────────────────────────────────
+    // ── Register Nurse (SUPER_ADMIN only) — creates a staff User ────────────
 
     @PostMapping("/admin/register-nurse")
     public ResponseEntity<?> registerNurse(
@@ -74,8 +68,7 @@ public class AuthController {
                         .body(Map.of("message", "Only SUPER_ADMIN can register nurses"));
             }
 
-            request.setRole("NURSE");
-            LoginResponse response = authenticationService.register(request);
+            LoginResponse response = authenticationService.registerStaff(request, "NURSE");
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -83,7 +76,7 @@ public class AuthController {
         }
     }
 
-    // ── Register Doctor (SUPER_ADMIN only) ────────────────────────────────────
+    // ── Register Doctor (SUPER_ADMIN only) — creates a staff User ───────────
 
     @PostMapping("/admin/register-doctor")
     public ResponseEntity<?> registerDoctor(
@@ -95,8 +88,7 @@ public class AuthController {
                         .body(Map.of("message", "Only SUPER_ADMIN can register doctors"));
             }
 
-            request.setRole("DOCTOR");
-            LoginResponse response = authenticationService.register(request);
+            LoginResponse response = authenticationService.registerStaff(request, "DOCTOR");
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)

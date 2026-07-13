@@ -1,6 +1,8 @@
 package edu.cit.mabini.meditrack.security;
 
+import edu.cit.mabini.meditrack.entity.Patient;
 import edu.cit.mabini.meditrack.entity.User;
+import edu.cit.mabini.meditrack.repository.PatientRepository;
 import edu.cit.mabini.meditrack.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -12,15 +14,37 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class CustomUserDetailsService implements UserDetailsService {
 
-    private final UserRepository userRepository;
+    private final UserRepository    userRepository;
+    private final PatientRepository patientRepository;
 
+    // Two separate account tables now: staff logins live in "users"
+    // (SUPER_ADMIN / NURSE / DOCTOR), patient logins live directly on
+    // "patients". A given email can only exist in one of the two —
+    // enforced at registration time — so checking users first and
+    // falling back to patients is unambiguous.
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        User user = userRepository.findByEmail(email.trim().toLowerCase())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
+        String normalized = email.trim().toLowerCase();
 
-        System.out.println(">>> DEBUG loaded user: " + user.getEmail() + " | role=[" + user.getRole() + "]");
+        return userRepository.findByEmail(normalized)
+                .map(this::fromUser)
+                .or(() -> patientRepository.findByEmail(normalized)
+                    .filter(p -> p.getPassword() != null)
+                    .map(this::fromPatient))
+                .orElseThrow(() ->
+                    new UsernameNotFoundException("No account found with email: " + email));
+    }
 
-        return new CustomUserDetails(user);
+    private CustomUserDetails fromUser(User user) {
+        return new CustomUserDetails(
+            user.getId(), user.getEmail(), user.getPassword(), user.getRole(), user.getFullName()
+        );
+    }
+
+    private CustomUserDetails fromPatient(Patient patient) {
+        String fullName = (patient.getFirstName() + " " + patient.getLastName()).trim();
+        return new CustomUserDetails(
+            patient.getId(), patient.getEmail(), patient.getPassword(), "PATIENT", fullName
+        );
     }
 }

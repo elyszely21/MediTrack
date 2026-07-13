@@ -5,7 +5,6 @@ import edu.cit.mabini.meditrack.dto.MedicalRecordDto;
 import edu.cit.mabini.meditrack.dto.PatientProfileDto;
 import edu.cit.mabini.meditrack.dto.PrescriptionDto;
 import edu.cit.mabini.meditrack.entity.Patient;
-import edu.cit.mabini.meditrack.entity.User;
 import edu.cit.mabini.meditrack.repository.PatientRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,10 +23,9 @@ public class PatientPortalService {
     // ── Resolve the caller's own patient record ─────────────────────────────
 
     private Patient resolvePatient(String email) {
-        return patientRepository.findByUser_Email(email)
+        return patientRepository.findByEmail(email.trim().toLowerCase())
                 .orElseThrow(() -> new IllegalArgumentException(
-                    "No patient profile is linked to this account yet. " +
-                    "Please contact the clinic to have your records connected."
+                    "No patient profile found for this account."
                 ));
     }
 
@@ -35,7 +33,6 @@ public class PatientPortalService {
 
     public PatientProfileDto getMyProfile(String email) {
         Patient patient = resolvePatient(email);
-        User user = patient.getUser();
 
         return PatientProfileDto.builder()
                 .id(patient.getId())
@@ -47,8 +44,8 @@ public class PatientPortalService {
                 .address(patient.getAddress())
                 .contactNumber(patient.getContactNumber())
                 .emergencyContact(patient.getEmergencyContact())
-                .email(user != null ? user.getEmail() : null)
-                .phoneNumber(user != null ? user.getPhoneNumber() : null)
+                .email(patient.getEmail())
+                .phoneNumber(patient.getContactNumber())
                 .build();
     }
 

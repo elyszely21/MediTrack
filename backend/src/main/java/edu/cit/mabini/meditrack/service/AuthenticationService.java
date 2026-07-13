@@ -3,7 +3,9 @@ package edu.cit.mabini.meditrack.service;
 import edu.cit.mabini.meditrack.dto.LoginRequest;
 import edu.cit.mabini.meditrack.dto.LoginResponse;
 import edu.cit.mabini.meditrack.dto.RegisterRequest;
+import edu.cit.mabini.meditrack.entity.Patient;
 import edu.cit.mabini.meditrack.entity.User;
+import edu.cit.mabini.meditrack.repository.PatientRepository;
 import edu.cit.mabini.meditrack.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -16,13 +18,35 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class AuthenticationService {
 
-    private final UserService userService;
-    private final PasswordEncoder passwordEncoder;
+    private final UserService        userService;
+    private final PatientService     patientService;
+    private final PatientRepository  patientRepository;
+    private final PasswordEncoder    passwordEncoder;
     private final AuthenticationManager authenticationManager;
-    private final JwtTokenProvider jwtTokenProvider;
+    private final JwtTokenProvider    jwtTokenProvider;
 
-    public LoginResponse register(RegisterRequest request) {
+    // ── Public registration → always creates a Patient ──────────────────────
+
+    public LoginResponse registerPatient(RegisterRequest request) {
+        Patient patient = patientService.registerSelf(request);
+        String fullName = (patient.getFirstName() + " " + patient.getLastName()).trim();
+
+        return LoginResponse.builder()
+                .success(true)
+                .message("Registration successful")
+                .fullName(fullName)
+                .email(patient.getEmail())
+                .role("PATIENT")
+                .token(jwtTokenProvider.generateToken(patient.getEmail(), "PATIENT"))
+                .build();
+    }
+
+    // ── Admin-triggered staff registration → creates a User ─────────────────
+
+    public LoginResponse registerStaff(RegisterRequest request, String role) {
+        request.setRole(role);
         User user = userService.register(request);
+
         return LoginResponse.builder()
                 .success(true)
                 .message("Registration successful")
@@ -33,16 +57,29 @@ public class AuthenticationService {
                 .build();
     }
 
-    public LoginResponse login(LoginRequest request) {
-        User user = userService.findUserByEmail(request.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+    // ── Login — checks staff accounts first, then patient accounts ─────────
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+    public LoginResponse login(LoginRequest request) {
+        String email = request.getEmail().trim().toLowerCase();
+
+        var staffUser = userService.findUserByEmail(email);
+        if (staffUser.isPresent()) {
+            return loginAsStaff(staffUser.get(), email, request.getPassword());
+        }
+
+        Patient patient = patientRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Account not found"));
+
+        return loginAsPatient(patient, email, request.getPassword());
+    }
+
+    private LoginResponse loginAsStaff(User user, String email, String rawPassword) {
+        if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
             throw new IllegalArgumentException("Incorrect password");
         }
 
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+                new UsernamePasswordAuthenticationToken(email, rawPassword)
         );
 
         return LoginResponse.builder()
@@ -51,6 +88,33 @@ public class AuthenticationService {
                 .fullName(user.getFullName())
                 .email(user.getEmail())
                 .role(user.getRole())
+                .token(jwtTokenProvider.generateToken(authentication))
+                .build();
+    }
+
+    private LoginResponse loginAsPatient(Patient patient, String email, String rawPassword) {
+        if (patient.getPassword() == null) {
+            throw new IllegalArgumentException(
+                "This patient record has no portal login. Please register or contact the clinic."
+            );
+        }
+
+        if (!passwordEncoder.matches(rawPassword, patient.getPassword())) {
+            throw new IllegalArgumentException("Incorrect password");
+        }
+
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(email, rawPassword)
+        );
+
+        String fullName = (patient.getFirstName() + " " + patient.getLastName()).trim();
+
+        return LoginResponse.builder()
+                .success(true)
+                .message("Login successful")
+                .fullName(fullName)
+                .email(patient.getEmail())
+                .role("PATIENT")
                 .token(jwtTokenProvider.generateToken(authentication))
                 .build();
     }
