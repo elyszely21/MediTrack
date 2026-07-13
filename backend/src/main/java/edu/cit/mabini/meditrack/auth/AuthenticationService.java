@@ -4,9 +4,6 @@ import edu.cit.mabini.meditrack.patient.PatientService;
 
 import edu.cit.mabini.meditrack.user.UserService;
 
-import edu.cit.mabini.meditrack.auth.LoginRequest;
-import edu.cit.mabini.meditrack.auth.LoginResponse;
-import edu.cit.mabini.meditrack.auth.RegisterRequest;
 import edu.cit.mabini.meditrack.patient.Patient;
 import edu.cit.mabini.meditrack.user.User;
 import edu.cit.mabini.meditrack.patient.PatientRepository;

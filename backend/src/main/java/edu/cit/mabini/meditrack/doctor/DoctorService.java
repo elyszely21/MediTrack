@@ -2,8 +2,6 @@ package edu.cit.mabini.meditrack.doctor;
 
 import edu.cit.mabini.meditrack.common.audit.AuditLogService;
 
-import edu.cit.mabini.meditrack.doctor.DoctorDto;
-import edu.cit.mabini.meditrack.doctor.RegisterDoctorRequest;
 import edu.cit.mabini.meditrack.user.User;
 import edu.cit.mabini.meditrack.user.UserRepository;
 import lombok.RequiredArgsConstructor;

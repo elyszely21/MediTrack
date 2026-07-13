@@ -8,10 +8,7 @@ import edu.cit.mabini.meditrack.appointment.AppointmentService;
 
 import edu.cit.mabini.meditrack.appointment.AppointmentDto;
 import edu.cit.mabini.meditrack.medicalrecord.MedicalRecordDto;
-import edu.cit.mabini.meditrack.patient.PatientProfileDto;
 import edu.cit.mabini.meditrack.prescription.PrescriptionDto;
-import edu.cit.mabini.meditrack.patient.Patient;
-import edu.cit.mabini.meditrack.patient.PatientRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

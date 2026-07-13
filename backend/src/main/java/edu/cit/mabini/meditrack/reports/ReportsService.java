@@ -20,8 +20,6 @@ import edu.cit.mabini.meditrack.user.UserRepository;
 
 import edu.cit.mabini.meditrack.common.audit.AuditLogRepository;
 
-import edu.cit.mabini.meditrack.reports.DashboardSummaryDto;
-import edu.cit.mabini.meditrack.reports.RecentActivityDto;
 import edu.cit.mabini.meditrack.common.audit.AuditLog;
 import edu.cit.mabini.meditrack.repository.*;
 import lombok.RequiredArgsConstructor;

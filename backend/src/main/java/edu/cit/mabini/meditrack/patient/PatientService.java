@@ -2,10 +2,7 @@ package edu.cit.mabini.meditrack.patient;
 
 import edu.cit.mabini.meditrack.common.audit.AuditLogService;
 
-import edu.cit.mabini.meditrack.patient.PatientDto;
 import edu.cit.mabini.meditrack.auth.RegisterRequest;
-import edu.cit.mabini.meditrack.patient.Patient;
-import edu.cit.mabini.meditrack.patient.PatientRepository;
 import edu.cit.mabini.meditrack.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;

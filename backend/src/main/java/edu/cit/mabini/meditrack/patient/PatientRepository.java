@@ -1,6 +1,5 @@
 package edu.cit.mabini.meditrack.patient;
 
-import edu.cit.mabini.meditrack.patient.Patient;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

@@ -4,10 +4,6 @@ import edu.cit.mabini.meditrack.patient.Patient;
 
 import edu.cit.mabini.meditrack.user.User;
 
-import edu.cit.mabini.meditrack.auth.LoginRequest;
-import edu.cit.mabini.meditrack.auth.LoginResponse;
-import edu.cit.mabini.meditrack.auth.RegisterRequest;
-import edu.cit.mabini.meditrack.auth.AuthenticationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

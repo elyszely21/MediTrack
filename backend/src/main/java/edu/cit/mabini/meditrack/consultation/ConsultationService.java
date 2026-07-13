@@ -2,10 +2,7 @@ package edu.cit.mabini.meditrack.consultation;
 
 import edu.cit.mabini.meditrack.common.audit.AuditLogService;
 
-import edu.cit.mabini.meditrack.consultation.ConsultationDto;
-import edu.cit.mabini.meditrack.consultation.Consultation;
 import edu.cit.mabini.meditrack.patient.Patient;
-import edu.cit.mabini.meditrack.consultation.ConsultationRepository;
 import edu.cit.mabini.meditrack.patient.PatientRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

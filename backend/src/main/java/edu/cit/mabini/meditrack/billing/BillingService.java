@@ -2,16 +2,10 @@ package edu.cit.mabini.meditrack.billing;
 
 import edu.cit.mabini.meditrack.common.audit.AuditLogService;
 
-import edu.cit.mabini.meditrack.billing.BillDto;
-import edu.cit.mabini.meditrack.billing.PaymentDto;
 import edu.cit.mabini.meditrack.appointment.Appointment;
-import edu.cit.mabini.meditrack.billing.Bill;
 import edu.cit.mabini.meditrack.patient.Patient;
-import edu.cit.mabini.meditrack.billing.Payment;
 import edu.cit.mabini.meditrack.appointment.AppointmentRepository;
-import edu.cit.mabini.meditrack.billing.BillRepository;
 import edu.cit.mabini.meditrack.patient.PatientRepository;
-import edu.cit.mabini.meditrack.billing.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

@@ -1,9 +1,6 @@
 package edu.cit.mabini.meditrack.medicalrecord;
 
-import edu.cit.mabini.meditrack.medicalrecord.MedicalRecordDto;
-import edu.cit.mabini.meditrack.medicalrecord.MedicalRecord;
 import edu.cit.mabini.meditrack.patient.Patient;
-import edu.cit.mabini.meditrack.medicalrecord.MedicalRecordRepository;
 import edu.cit.mabini.meditrack.patient.PatientRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
