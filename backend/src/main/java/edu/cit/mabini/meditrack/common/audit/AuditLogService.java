@@ -1,7 +1,7 @@
-package edu.cit.mabini.meditrack.service;
+package edu.cit.mabini.meditrack.common.audit;
 
-import edu.cit.mabini.meditrack.entity.AuditLog;
-import edu.cit.mabini.meditrack.repository.AuditLogRepository;
+import edu.cit.mabini.meditrack.common.audit.AuditLog;
+import edu.cit.mabini.meditrack.common.audit.AuditLogRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;

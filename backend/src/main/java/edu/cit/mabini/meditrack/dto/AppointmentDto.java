@@ -1,4 +1,4 @@
-package edu.cit.mabini.meditrack.dto;
+package edu.cit.mabini.meditrack.appointment;
 
 import lombok.*;
 

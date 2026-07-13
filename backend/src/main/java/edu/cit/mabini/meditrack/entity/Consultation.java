@@ -1,4 +1,6 @@
-package edu.cit.mabini.meditrack.entity;
+package edu.cit.mabini.meditrack.consultation;
+
+import edu.cit.mabini.meditrack.patient.Patient;
 
 import jakarta.persistence.*;
 import lombok.*;

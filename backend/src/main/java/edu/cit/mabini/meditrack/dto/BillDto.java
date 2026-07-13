@@ -1,4 +1,6 @@
-package edu.cit.mabini.meditrack.dto;
+package edu.cit.mabini.meditrack.billing;
+
+import edu.cit.mabini.meditrack.patient.Patient;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

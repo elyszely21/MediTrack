@@ -1,8 +1,8 @@
-package edu.cit.mabini.meditrack.controller;
+package edu.cit.mabini.meditrack.billing;
 
-import edu.cit.mabini.meditrack.dto.BillDto;
-import edu.cit.mabini.meditrack.dto.PaymentDto;
-import edu.cit.mabini.meditrack.service.BillingService;
+import edu.cit.mabini.meditrack.billing.BillDto;
+import edu.cit.mabini.meditrack.billing.PaymentDto;
+import edu.cit.mabini.meditrack.billing.BillingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

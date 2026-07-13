@@ -1,4 +1,4 @@
-package edu.cit.mabini.meditrack.entity;
+package edu.cit.mabini.meditrack.billing;
 
 import jakarta.persistence.*;
 import lombok.*;

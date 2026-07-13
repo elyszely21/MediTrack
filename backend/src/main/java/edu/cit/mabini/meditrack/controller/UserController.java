@@ -1,7 +1,7 @@
-package edu.cit.mabini.meditrack.controller;
+package edu.cit.mabini.meditrack.user;
 
-import edu.cit.mabini.meditrack.entity.User;
-import edu.cit.mabini.meditrack.service.UserService;
+import edu.cit.mabini.meditrack.user.User;
+import edu.cit.mabini.meditrack.user.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;

@@ -1,11 +1,15 @@
-package edu.cit.mabini.meditrack.service;
+package edu.cit.mabini.meditrack.auth;
 
-import edu.cit.mabini.meditrack.dto.LoginRequest;
-import edu.cit.mabini.meditrack.dto.LoginResponse;
-import edu.cit.mabini.meditrack.dto.RegisterRequest;
-import edu.cit.mabini.meditrack.entity.Patient;
-import edu.cit.mabini.meditrack.entity.User;
-import edu.cit.mabini.meditrack.repository.PatientRepository;
+import edu.cit.mabini.meditrack.patient.PatientService;
+
+import edu.cit.mabini.meditrack.user.UserService;
+
+import edu.cit.mabini.meditrack.auth.LoginRequest;
+import edu.cit.mabini.meditrack.auth.LoginResponse;
+import edu.cit.mabini.meditrack.auth.RegisterRequest;
+import edu.cit.mabini.meditrack.patient.Patient;
+import edu.cit.mabini.meditrack.user.User;
+import edu.cit.mabini.meditrack.patient.PatientRepository;
 import edu.cit.mabini.meditrack.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;

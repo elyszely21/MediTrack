@@ -1,4 +1,4 @@
-package edu.cit.mabini.meditrack.dto;
+package edu.cit.mabini.meditrack.auth;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

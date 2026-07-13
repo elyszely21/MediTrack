@@ -1,9 +1,11 @@
-package edu.cit.mabini.meditrack.service;
+package edu.cit.mabini.meditrack.doctor;
 
-import edu.cit.mabini.meditrack.dto.DoctorDto;
-import edu.cit.mabini.meditrack.dto.RegisterDoctorRequest;
-import edu.cit.mabini.meditrack.entity.User;
-import edu.cit.mabini.meditrack.repository.UserRepository;
+import edu.cit.mabini.meditrack.common.audit.AuditLogService;
+
+import edu.cit.mabini.meditrack.doctor.DoctorDto;
+import edu.cit.mabini.meditrack.doctor.RegisterDoctorRequest;
+import edu.cit.mabini.meditrack.user.User;
+import edu.cit.mabini.meditrack.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;

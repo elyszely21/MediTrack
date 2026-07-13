@@ -1,7 +1,7 @@
-package edu.cit.mabini.meditrack.controller;
+package edu.cit.mabini.meditrack.consultation;
 
-import edu.cit.mabini.meditrack.dto.ConsultationDto;
-import edu.cit.mabini.meditrack.service.ConsultationService;
+import edu.cit.mabini.meditrack.consultation.ConsultationDto;
+import edu.cit.mabini.meditrack.consultation.ConsultationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

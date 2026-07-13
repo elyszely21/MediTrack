@@ -1,12 +1,12 @@
-package edu.cit.mabini.meditrack.service;
+package edu.cit.mabini.meditrack.prescription;
 
-import edu.cit.mabini.meditrack.dto.PrescriptionDto;
-import edu.cit.mabini.meditrack.entity.MedicalRecord;
-import edu.cit.mabini.meditrack.entity.Patient;
-import edu.cit.mabini.meditrack.entity.Prescription;
-import edu.cit.mabini.meditrack.repository.MedicalRecordRepository;
-import edu.cit.mabini.meditrack.repository.PatientRepository;
-import edu.cit.mabini.meditrack.repository.PrescriptionRepository;
+import edu.cit.mabini.meditrack.prescription.PrescriptionDto;
+import edu.cit.mabini.meditrack.medicalrecord.MedicalRecord;
+import edu.cit.mabini.meditrack.patient.Patient;
+import edu.cit.mabini.meditrack.prescription.Prescription;
+import edu.cit.mabini.meditrack.medicalrecord.MedicalRecordRepository;
+import edu.cit.mabini.meditrack.patient.PatientRepository;
+import edu.cit.mabini.meditrack.prescription.PrescriptionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

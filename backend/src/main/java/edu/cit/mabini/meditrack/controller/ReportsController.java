@@ -1,7 +1,7 @@
-package edu.cit.mabini.meditrack.controller;
+package edu.cit.mabini.meditrack.reports;
 
-import edu.cit.mabini.meditrack.dto.DashboardSummaryDto;
-import edu.cit.mabini.meditrack.service.ReportsService;
+import edu.cit.mabini.meditrack.reports.DashboardSummaryDto;
+import edu.cit.mabini.meditrack.reports.ReportsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;

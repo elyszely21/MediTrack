@@ -1,4 +1,8 @@
-package edu.cit.mabini.meditrack.dto;
+package edu.cit.mabini.meditrack.reports;
+
+import edu.cit.mabini.meditrack.billing.Bill;
+
+import edu.cit.mabini.meditrack.appointment.Appointment;
 
 import lombok.Builder;
 import lombok.Data;

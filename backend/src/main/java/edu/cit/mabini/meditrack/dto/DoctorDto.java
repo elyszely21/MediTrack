@@ -1,4 +1,4 @@
-package edu.cit.mabini.meditrack.dto;
+package edu.cit.mabini.meditrack.doctor;
 
 import lombok.Builder;
 import lombok.Data;

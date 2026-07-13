@@ -1,6 +1,6 @@
-package edu.cit.mabini.meditrack.repository;
+package edu.cit.mabini.meditrack.user;
 
-import edu.cit.mabini.meditrack.entity.User;
+import edu.cit.mabini.meditrack.user.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

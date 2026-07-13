@@ -1,6 +1,6 @@
-package edu.cit.mabini.meditrack.repository;
+package edu.cit.mabini.meditrack.appointment;
 
-import edu.cit.mabini.meditrack.entity.Appointment;
+import edu.cit.mabini.meditrack.appointment.Appointment;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

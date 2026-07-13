@@ -1,4 +1,4 @@
-package edu.cit.mabini.meditrack.exception;
+package edu.cit.mabini.meditrack.common.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

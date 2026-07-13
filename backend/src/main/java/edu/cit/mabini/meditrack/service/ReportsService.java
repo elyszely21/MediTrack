@@ -1,8 +1,28 @@
-package edu.cit.mabini.meditrack.service;
+package edu.cit.mabini.meditrack.reports;
 
-import edu.cit.mabini.meditrack.dto.DashboardSummaryDto;
-import edu.cit.mabini.meditrack.dto.RecentActivityDto;
-import edu.cit.mabini.meditrack.entity.AuditLog;
+import edu.cit.mabini.meditrack.billing.BillRepository;
+
+import edu.cit.mabini.meditrack.billing.Bill;
+
+import edu.cit.mabini.meditrack.medicalrecord.MedicalRecordRepository;
+
+import edu.cit.mabini.meditrack.prescription.PrescriptionRepository;
+
+import edu.cit.mabini.meditrack.consultation.ConsultationRepository;
+
+import edu.cit.mabini.meditrack.appointment.AppointmentRepository;
+
+import edu.cit.mabini.meditrack.appointment.Appointment;
+
+import edu.cit.mabini.meditrack.patient.PatientRepository;
+
+import edu.cit.mabini.meditrack.user.UserRepository;
+
+import edu.cit.mabini.meditrack.common.audit.AuditLogRepository;
+
+import edu.cit.mabini.meditrack.reports.DashboardSummaryDto;
+import edu.cit.mabini.meditrack.reports.RecentActivityDto;
+import edu.cit.mabini.meditrack.common.audit.AuditLog;
 import edu.cit.mabini.meditrack.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

@@ -1,4 +1,4 @@
-package edu.cit.mabini.meditrack.entity;
+package edu.cit.mabini.meditrack.user;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;

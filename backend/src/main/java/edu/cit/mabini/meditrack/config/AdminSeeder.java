@@ -1,7 +1,7 @@
 package edu.cit.mabini.meditrack.config;
 
-import edu.cit.mabini.meditrack.entity.User;
-import edu.cit.mabini.meditrack.repository.UserRepository;
+import edu.cit.mabini.meditrack.user.User;
+import edu.cit.mabini.meditrack.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
