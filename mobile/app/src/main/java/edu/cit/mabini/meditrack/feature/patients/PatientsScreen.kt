@@ -23,8 +23,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import edu.cit.mabini.meditrack.feature.patients.data.model.PatientDto
-import edu.cit.mabini.meditrack.viewmodel.PatientActionState
-import edu.cit.mabini.meditrack.viewmodel.PatientUiState
+import edu.cit.mabini.meditrack.feature.patients.PatientActionState
+import edu.cit.mabini.meditrack.feature.patients.PatientUiState
 import edu.cit.mabini.meditrack.feature.patients.PatientViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)

@@ -19,8 +19,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import edu.cit.mabini.meditrack.feature.medicalrecords.data.model.MedicalRecordDto
-import edu.cit.mabini.meditrack.viewmodel.RecordActionState
-import edu.cit.mabini.meditrack.viewmodel.RecordUiState
+import edu.cit.mabini.meditrack.feature.medicalrecords.RecordActionState
+import edu.cit.mabini.meditrack.feature.medicalrecords.RecordUiState
 import edu.cit.mabini.meditrack.feature.medicalrecords.MedicalRecordViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter

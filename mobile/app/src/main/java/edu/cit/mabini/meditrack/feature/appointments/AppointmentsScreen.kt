@@ -21,8 +21,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import edu.cit.mabini.meditrack.feature.appointments.data.model.AppointmentDto
-import edu.cit.mabini.meditrack.viewmodel.AppointmentActionState
-import edu.cit.mabini.meditrack.viewmodel.AppointmentUiState
+import edu.cit.mabini.meditrack.feature.appointments.AppointmentActionState
+import edu.cit.mabini.meditrack.feature.appointments.AppointmentUiState
 import edu.cit.mabini.meditrack.feature.appointments.AppointmentViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)

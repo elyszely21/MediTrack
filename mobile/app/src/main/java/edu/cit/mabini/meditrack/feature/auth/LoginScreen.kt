@@ -16,7 +16,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import edu.cit.mabini.meditrack.viewmodel.AuthUiState
+import edu.cit.mabini.meditrack.feature.auth.AuthUiState
 import edu.cit.mabini.meditrack.feature.auth.AuthViewModel
 
 @Composable

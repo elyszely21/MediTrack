@@ -1,6 +1,5 @@
 package edu.cit.mabini.meditrack.core.network
 
-import edu.cit.mabini.meditrack.model.*
 import edu.cit.mabini.meditrack.feature.medicalrecords.data.model.MedicalRecordDto
 import edu.cit.mabini.meditrack.feature.appointments.data.model.AppointmentDto
 import edu.cit.mabini.meditrack.feature.patients.data.model.PatientDto
