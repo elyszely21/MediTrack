@@ -1,5 +1,9 @@
 package edu.cit.mabini.meditrack.security;
 
+import edu.cit.mabini.meditrack.patient.Patient;
+
+import edu.cit.mabini.meditrack.user.User;
+
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;

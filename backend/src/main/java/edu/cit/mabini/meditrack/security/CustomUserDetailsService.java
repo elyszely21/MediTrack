@@ -1,9 +1,9 @@
 package edu.cit.mabini.meditrack.security;
 
-import edu.cit.mabini.meditrack.entity.Patient;
-import edu.cit.mabini.meditrack.entity.User;
-import edu.cit.mabini.meditrack.repository.PatientRepository;
-import edu.cit.mabini.meditrack.repository.UserRepository;
+import edu.cit.mabini.meditrack.patient.Patient;
+import edu.cit.mabini.meditrack.user.User;
+import edu.cit.mabini.meditrack.patient.PatientRepository;
+import edu.cit.mabini.meditrack.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
