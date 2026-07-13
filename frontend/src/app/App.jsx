@@ -1,23 +1,23 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import AdminDashboard from './pages/AdminDashboard';
-import NurseDashboard from './pages/NurseDashboard';
-import DoctorDashboard from './pages/DoctorDashboard';
-import PatientDashboard from './pages/PatientDashboard';
-import Patients from './pages/Patients';
-import MedicalRecords from './pages/MedicalRecords';
-import Appointments from './pages/Appointments';
-import Reports from './pages/Reports';
-import Nurses from './pages/Nurses';
-import Doctors from './pages/Doctors';
-import RegisterNurse from './pages/RegisterNurse';
-import ProtectedRoute from './components/ProtectedRoute';
-import StaffRoute from './components/StaffRoute';
+import Login from '../pages/login/Login';
+import Register from '../pages/register/Register';
+import AdminDashboard from '../pages/dashboard/AdminDashboard';
+import NurseDashboard from '../pages/dashboard/NurseDashboard';
+import DoctorDashboard from '../pages/dashboard/DoctorDashboard';
+import PatientDashboard from '../pages/dashboard/PatientDashboard';
+import Patients from '../pages/patients/Patients';
+import MedicalRecords from '../pages/medical-records/MedicalRecords';
+import Appointments from '../pages/appointments/Appointments';
+import Reports from '../pages/reports/Reports';
+import Nurses from '../pages/nurses/Nurses';
+import Doctors from '../pages/doctors/Doctors';
+import RegisterNurse from '../pages/register-nurse/RegisterNurse';
+import ProtectedRoute from '../widgets/route-guards/ProtectedRoute';
+import StaffRoute from '../widgets/route-guards/StaffRoute';
 import './App.css';
-import Prescriptions from './pages/Prescriptions';
-import Billing from './pages/Billing';
-import Consultations from "./pages/Consultations";
+import Prescriptions from '../pages/prescriptions/Prescriptions';
+import Billing from '../pages/billing/Billing';
+import Consultations from "../pages/consultations/Consultations";
 
 function App() {
   return (

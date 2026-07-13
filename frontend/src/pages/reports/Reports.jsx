@@ -1,4 +1,4 @@
-import Navbar from '../components/Navbar';
+import Navbar from '../../widgets/navbar/Navbar';
 
 const Reports = () => (
   <div className="dashboard-page">

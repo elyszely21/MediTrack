@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import api from '../api/axios';
-import Input from '../components/Input';
-import Button from '../components/Button';
+import api from '../../shared/api/axios';
+import Input from '../../shared/ui/Input';
+import Button from '../../shared/ui/Button';
 
 const Register = () => {
   const navigate = useNavigate();

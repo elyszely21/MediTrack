@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Navbar from "../components/Navbar";
-import axios from "../api/axios";
+import Navbar from "../../widgets/navbar/Navbar";
+import axios from "../../shared/api/axios";
 
 export default function DoctorDashboard() {
   const user     = JSON.parse(localStorage.getItem("meditrackUser") || "{}");

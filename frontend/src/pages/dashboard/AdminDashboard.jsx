@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Layout from "../components/Layout";
-import axios from "../api/axios";
+import Layout from "../../widgets/layout/Layout";
+import axios from "../../shared/api/axios";
 
 const STAT_CARDS = [
   { key: "totalPatients",       label: "Total Patients",      color: "bg-blue-500",   icon: "👥" },
