@@ -35,8 +35,33 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_" + role));
+        String raw = role == null ? "" : role.trim();
+        if (raw.isBlank()) {
+            return List.of();
+        }
+
+        String normalized = raw.toUpperCase();
+        if (normalized.startsWith("ROLE_")) {
+            normalized = normalized.substring("ROLE_".length());
+        }
+
+        // Force mapping so Spring Security always sees ROLE_* authorities.
+        // Examples handled:
+        //  - SUPER_ADMIN -> ROLE_SUPER_ADMIN
+        //  - ROLE_SUPER_ADMIN -> ROLE_SUPER_ADMIN
+        //  - super_admin -> ROLE_SUPER_ADMIN
+        //  - PATIENT -> ROLE_PATIENT
+        //  - ROLE_PATIENT -> ROLE_PATIENT
+        //  - DOCTOR -> ROLE_DOCTOR
+        //  - ROLE_DOCTOR -> ROLE_DOCTOR
+        //  - NURSE -> ROLE_NURSE
+        //  - ROLE_NURSE -> ROLE_NURSE
+        String authority = "ROLE_" + normalized;
+
+        return List.of(new SimpleGrantedAuthority(authority));
     }
+
+
 
     @Override
     public String getPassword() {

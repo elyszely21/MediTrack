@@ -1,7 +1,6 @@
 package edu.cit.mabini.meditrack.patient;
 
 import edu.cit.mabini.meditrack.common.audit.AuditLogService;
-
 import edu.cit.mabini.meditrack.auth.RegisterRequest;
 import edu.cit.mabini.meditrack.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -20,15 +19,9 @@ public class PatientService {
     private final PasswordEncoder   passwordEncoder;
     private final AuditLogService   auditLogService;
 
-    // ── Public self-registration ─────────────────────────────────────────────
-    // This is what /api/auth/register calls. A registering patient lands
-    // directly in the patients table with their own login credentials —
-    // never in the staff "users" table.
     public Patient registerSelf(RegisterRequest request) {
         String email = request.getEmail().trim().toLowerCase();
 
-        // Keep emails unique across both account tables so login lookup
-        // (which checks users first, then patients) is never ambiguous.
         if (patientRepository.existsByEmail(email) || userRepository.existsByEmail(email)) {
             throw new IllegalArgumentException("Email already registered");
         }
@@ -49,9 +42,6 @@ public class PatientService {
             }
         }
 
-        // patientNumber has a NOT NULL + UNIQUE constraint and we want it
-        // derived from the row's own id, so save once with a temporary
-        // placeholder, then update it now that an id exists.
         Patient patient = Patient.builder()
                 .email(email)
                 .password(passwordEncoder.encode(request.getPassword()))
@@ -66,9 +56,7 @@ public class PatientService {
         saved = patientRepository.save(saved);
 
         auditLogService.log(
-            "CREATED",
-            "Patient",
-            String.valueOf(saved.getId()),
+            "CREATED", "Patient", String.valueOf(saved.getId()),
             "Patient self-registered: " + saved.getFirstName() + " " + saved.getLastName()
                 + " (" + saved.getPatientNumber() + ")"
         );
@@ -77,10 +65,42 @@ public class PatientService {
     }
 
     public List<PatientDto> findAllPatients() {
-        return patientRepository.findAll()
-                .stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
+        return patientRepository.findByArchivedFalse()
+                .stream().map(this::toDto).collect(Collectors.toList());
+    }
+
+    public List<PatientDto> findArchivedPatients() {
+        return patientRepository.findByArchivedTrue()
+                .stream().map(this::toDto).collect(Collectors.toList());
+    }
+
+    public List<PatientDto> searchPatients(String q, boolean archived) {
+        return patientRepository.search(q, archived)
+                .stream().map(this::toDto).collect(Collectors.toList());
+    }
+
+    public PatientDto archivePatient(Long id) {
+        Patient patient = patientRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Patient not found"));
+        patient.setArchived(true);
+        Patient saved = patientRepository.save(patient);
+
+        auditLogService.log("ARCHIVED", "Patient", String.valueOf(saved.getId()),
+            "Patient archived: " + saved.getFirstName() + " " + saved.getLastName());
+
+        return toDto(saved);
+    }
+
+    public PatientDto unarchivePatient(Long id) {
+        Patient patient = patientRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Patient not found"));
+        patient.setArchived(false);
+        Patient saved = patientRepository.save(patient);
+
+        auditLogService.log("UNARCHIVED", "Patient", String.valueOf(saved.getId()),
+            "Patient restored: " + saved.getFirstName() + " " + saved.getLastName());
+
+        return toDto(saved);
     }
 
     public PatientDto getPatient(Long id) {
@@ -107,13 +127,9 @@ public class PatientService {
 
         Patient saved = patientRepository.save(patient);
 
-        auditLogService.log(
-            "CREATED",
-            "Patient",
-            String.valueOf(saved.getId()),
+        auditLogService.log("CREATED", "Patient", String.valueOf(saved.getId()),
             "Patient registered: " + saved.getFirstName() + " " + saved.getLastName()
-                + " (" + saved.getPatientNumber() + ")"
-        );
+                + " (" + saved.getPatientNumber() + ")");
 
         return toDto(saved);
     }
@@ -132,12 +148,8 @@ public class PatientService {
 
         Patient saved = patientRepository.save(patient);
 
-        auditLogService.log(
-            "UPDATED",
-            "Patient",
-            String.valueOf(saved.getId()),
-            "Patient updated: " + saved.getFirstName() + " " + saved.getLastName()
-        );
+        auditLogService.log("UPDATED", "Patient", String.valueOf(saved.getId()),
+            "Patient updated: " + saved.getFirstName() + " " + saved.getLastName());
 
         return toDto(saved);
     }
@@ -146,15 +158,18 @@ public class PatientService {
         Patient patient = patientRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Patient not found"));
 
-        auditLogService.log(
-            "DELETED",
-            "Patient",
-            String.valueOf(id),
+        auditLogService.log("DELETED", "Patient", String.valueOf(id),
             "Patient removed: " + patient.getFirstName() + " " + patient.getLastName()
-                + " (" + patient.getPatientNumber() + ")"
-        );
+                + " (" + patient.getPatientNumber() + ")");
 
         patientRepository.deleteById(id);
+    }
+
+    public PatientDto getPatientByNumber(String patientNumber) {
+        return patientRepository.findByPatientNumber(patientNumber)
+                .map(this::toDto)
+                .orElseThrow(() -> new IllegalArgumentException(
+                    "No patient found with number: " + patientNumber));
     }
 
     private PatientDto toDto(Patient patient) {
@@ -168,6 +183,7 @@ public class PatientService {
                 .address(patient.getAddress())
                 .contactNumber(patient.getContactNumber())
                 .emergencyContact(patient.getEmergencyContact())
+                .archived(patient.isArchived())
                 .build();
     }
 }

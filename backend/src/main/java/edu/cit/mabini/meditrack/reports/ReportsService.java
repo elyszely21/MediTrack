@@ -1,25 +1,15 @@
 package edu.cit.mabini.meditrack.reports;
 
 import edu.cit.mabini.meditrack.billing.BillRepository;
-
 import edu.cit.mabini.meditrack.billing.Bill;
-
 import edu.cit.mabini.meditrack.medicalrecord.MedicalRecordRepository;
-
 import edu.cit.mabini.meditrack.prescription.PrescriptionRepository;
-
 import edu.cit.mabini.meditrack.consultation.ConsultationRepository;
-
 import edu.cit.mabini.meditrack.appointment.AppointmentRepository;
-
 import edu.cit.mabini.meditrack.appointment.Appointment;
-
 import edu.cit.mabini.meditrack.patient.PatientRepository;
-
 import edu.cit.mabini.meditrack.user.UserRepository;
-
 import edu.cit.mabini.meditrack.common.audit.AuditLogRepository;
-
 import edu.cit.mabini.meditrack.common.audit.AuditLog;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -43,21 +33,19 @@ public class ReportsService {
 
     public DashboardSummaryDto getSummary() {
 
-        // Today's appointments
         long todayAppointments = appointmentRepo
                 .findByAppointmentDate(LocalDate.now()).size();
 
-        // Appointment status breakdown
-        long scheduled  = appointmentRepo.countByStatus("SCHEDULED");
-        long completed  = appointmentRepo.countByStatus("COMPLETED");
-        long cancelled  = appointmentRepo.countByStatus("CANCELLED");
+        long pending    = appointmentRepo.countByStatus(Appointment.AppointmentStatus.PENDING_APPROVAL);
+        long approved   = appointmentRepo.countByStatus(Appointment.AppointmentStatus.APPROVED);
+        long completed  = appointmentRepo.countByStatus(Appointment.AppointmentStatus.COMPLETED);
+        long cancelled  = appointmentRepo.countByStatus(Appointment.AppointmentStatus.CANCELLED);
 
-        // Bill status breakdown
+
         long unpaid     = billRepo.countByStatus("UNPAID");
         long partial    = billRepo.countByStatus("PARTIAL");
         long paid       = billRepo.countByStatus("PAID");
 
-        // Recent activities
         List<RecentActivityDto> activities = auditLogRepo
                 .findTop20ByOrderByPerformedAtDesc()
                 .stream()
@@ -66,14 +54,15 @@ public class ReportsService {
 
         return DashboardSummaryDto.builder()
                 .totalPatients(patientRepo.count())
-                .totalNurses(userRepo.countByRole("ROLE_NURSE"))
+                .totalNurses(userRepo.countByRole("NURSE"))
                 .totalAppointments(appointmentRepo.count())
                 .totalConsultations(consultationRepo.count())
                 .totalPrescriptions(prescriptionRepo.count())
                 .totalBills(billRepo.count())
                 .totalMedicalRecords(medicalRecordRepo.count())
                 .todayAppointments(todayAppointments)
-                .scheduledAppointments(scheduled)
+                .scheduledAppointments(pending)
+                .approvedAppointments(approved)
                 .completedAppointments(completed)
                 .cancelledAppointments(cancelled)
                 .unpaidBills(unpaid)

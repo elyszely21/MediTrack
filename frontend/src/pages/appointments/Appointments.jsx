@@ -3,15 +3,34 @@ import axios from "../../shared/api/axios";
 import Navbar from '../../widgets/navbar/Navbar';
 
 const STATUS_CONFIG = {
-  PENDING:   { bg: "bg-yellow-100", text: "text-yellow-800", label: "Pending" },
-  APPROVED:  { bg: "bg-blue-100",   text: "text-blue-800",   label: "Approved" },
-  REJECTED:  { bg: "bg-red-100",    text: "text-red-700",    label: "Rejected" },
-  COMPLETED: { bg: "bg-green-100",  text: "text-green-800",  label: "Completed" },
-  CANCELLED: { bg: "bg-gray-100",   text: "text-gray-600",   label: "Cancelled" },
+  REQUESTED:            { bg: "bg-yellow-100", text: "text-yellow-800", label: "Requested" },
+  PENDING_APPROVAL:     { bg: "bg-blue-100",   text: "text-blue-800",   label: "Pending approval" },
+  APPROVED:             { bg: "bg-green-100",  text: "text-green-800",  label: "Approved" },
+  CHECKED_IN:          { bg: "bg-indigo-100", text: "text-indigo-800", label: "Checked-in" },
+  WAITING:             { bg: "bg-purple-100", text: "text-purple-800", label: "Waiting" },
+  IN_CONSULTATION:     { bg: "bg-cyan-100",   text: "text-cyan-800",   label: "In consultation" },
+  PRESCRIPTION_ISSUED: { bg: "bg-teal-100",   text: "text-teal-800",   label: "Prescription issued" },
+  COMPLETED:           { bg: "bg-green-100",  text: "text-green-800",  label: "Completed" },
+  NO_SHOW:             { bg: "bg-gray-100",   text: "text-gray-600",   label: "No-show" },
+  CANCELLED:           { bg: "bg-gray-100",   text: "text-gray-600",   label: "Cancelled" },
+  REJECTED:            { bg: "bg-red-100",    text: "text-red-700",    label: "Rejected" },
 };
 
-const STATUS_FILTERS = ["ALL", "PENDING", "APPROVED",
-                        "COMPLETED", "REJECTED", "CANCELLED"];
+const STATUS_FILTERS = [
+  "ALL",
+  "REQUESTED",
+  "PENDING_APPROVAL",
+  "APPROVED",
+  "CHECKED_IN",
+  "WAITING",
+  "IN_CONSULTATION",
+  "PRESCRIPTION_ISSUED",
+  "COMPLETED",
+  "NO_SHOW",
+  "CANCELLED",
+  "REJECTED",
+];
+
 
 export default function Appointments() {
   const user    = JSON.parse(localStorage.getItem("meditrackUser") || "{}");
@@ -27,13 +46,54 @@ export default function Appointments() {
   const [reason, setReason]             = useState("");
   const [submitting, setSubmitting]     = useState(false);
   const [successMsg, setSuccessMsg]     = useState("");
+  
+  // Edit A — form state
   const [form, setForm] = useState({
-    patientId: "", appointmentDate: "",
-    appointmentTime: "", remarks: ""
+    patientNumber: "",
+    doctorId: "",
+    appointmentDate: "",
+    appointmentTime: "",
+    remarks: ""
   });
+
   const [formError, setFormError] = useState("");
+  const [patientId, setPatientId] = useState(null);
+
+  // Doctor dropdown (frontend-only; backend already supports doctorId in AppointmentDto)
+  const [doctors, setDoctors] = useState([]);
+  const [doctorsLoading, setDoctorsLoading] = useState(false);
+  const [doctorsError, setDoctorsError] = useState("");
+
+  const fetchDoctors = useCallback(async () => {
+    setDoctorsLoading(true);
+    setDoctorsError("");
+    try {
+      // Try commonly used endpoints. If your backend differs, adjust endpoint(s) only in this file.
+      // 1) /users?role=DOCTOR (common)
+      let res;
+      try {
+        res = await axios.get("/users?role=DOCTOR");
+      } catch {
+        // 2) /doctors (common)
+        res = await axios.get("/doctors");
+      }
+
+      // Support either {content: []} or raw []
+      const list = Array.isArray(res.data)
+        ? res.data
+        : (res.data?.content || []);
+      setDoctors(list);
+    } catch (e) {
+      setDoctorsError(e?.response?.data?.message || "Failed to load doctors.");
+    } finally {
+      setDoctorsLoading(false);
+    }
+  }, []);
+
+
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
+
 
   const fetchAppointments = useCallback(async () => {
     setLoading(true);
@@ -51,6 +111,8 @@ export default function Appointments() {
   }, [statusFilter]);
 
   useEffect(() => { fetchAppointments(); }, [fetchAppointments]);
+  useEffect(() => { fetchDoctors(); }, [fetchDoctors]);
+
 
   const showSuccess = (msg) => {
     setSuccessMsg(msg);
@@ -59,34 +121,68 @@ export default function Appointments() {
 
   // ── Create ─────────────────────────────────────────────────────────────────
 
+  // Edit B — handleSubmit
   const handleSubmit = async (e) => {
     e.preventDefault();
     setFormError("");
 
-    if (!form.patientId || !form.appointmentDate || !form.appointmentTime) {
-      setFormError("Patient ID, date and time are required.");
+    if (!form.patientNumber || !form.appointmentDate || !form.appointmentTime) {
+      setFormError("Patient number, date and time are required.");
+      return;
+    }
+
+    if (!form.doctorId) {
+      setFormError("Doctor is required.");
       return;
     }
 
     setSubmitting(true);
     try {
+      // Fix async lookup bug: use resolved ID directly (do not rely on React state updates).
+      const lookupRes = await axios.get(
+        `/appointments/lookup-patient/${encodeURIComponent(form.patientNumber.trim())}`
+      );
+
+      const resolvedPatientId = lookupRes?.data?.id;
+      if (!resolvedPatientId) {
+        setFormError(`No patient found with number '${form.patientNumber}'.`);
+        return;
+      }
+
+      const durationMinutes = 30;
+      const startTime = form.appointmentTime; // "HH:mm"
+      const startDate = `${form.appointmentDate}T${startTime}:00`;
+      const endMs = new Date(startDate).getTime() + durationMinutes * 60 * 1000;
+      const endDate = new Date(endMs);
+      const endTime = endDate.toTimeString().slice(0, 5); // "HH:mm"
+
       await axios.post("/appointments", {
-        patientId:       Number(form.patientId),
+        patientId: resolvedPatientId,
+        doctorId: form.doctorId,
+        appointmentType: "CONSULTATION",
+        durationMinutes: durationMinutes,
         appointmentDate: form.appointmentDate,
-        appointmentTime: form.appointmentTime + ":00",
-        remarks:         form.remarks || null
+        appointmentTime: startTime + ":00",
+        endTime: endTime + ":00",
+        remarks: form.remarks || "—"
       });
+
       setShowForm(false);
-      setForm({ patientId:"", appointmentDate:"",
-                appointmentTime:"", remarks:"" });
+      setForm({ patientNumber:"", appointmentDate:"", appointmentTime:"", doctorId:"", remarks:"" });
+      setPatientId(null);
       showSuccess("Appointment scheduled successfully.");
       fetchAppointments();
     } catch (e) {
+      if (e.response?.status === 404) {
+        setFormError(`No patient found with number '${form.patientNumber}'.`);
+        return;
+      }
       setFormError(e.response?.data?.message || "Something went wrong.");
     } finally {
       setSubmitting(false);
     }
   };
+
 
   // ── Approval actions ───────────────────────────────────────────────────────
 
@@ -111,6 +207,22 @@ export default function Appointments() {
             { reason: reason || null });
           showSuccess("Appointment rejected.");
           break;
+        case "check-in":
+          await axios.put(`/appointments/${id}/check-in`);
+          showSuccess("Appointment checked-in.");
+          break;
+        case "waiting":
+          await axios.put(`/appointments/${id}/waiting`);
+          showSuccess("Appointment moved to waiting.");
+          break;
+        case "in-consultation":
+          await axios.put(`/appointments/${id}/in-consultation`);
+          showSuccess("Appointment in consultation.");
+          break;
+        case "prescription-issued":
+          await axios.put(`/appointments/${id}/prescription-issued`);
+          showSuccess("Prescription issued.");
+          break;
         case "complete":
           await axios.put(`/appointments/${id}/complete`);
           showSuccess("Appointment marked as completed.");
@@ -120,6 +232,12 @@ export default function Appointments() {
             { reason: reason || null });
           showSuccess("Appointment cancelled.");
           break;
+        case "no-show":
+          await axios.put(`/appointments/${id}/no-show`,
+            { reason: reason || null });
+          showSuccess("Marked as no-show.");
+          break;
+
         case "delete":
           await axios.delete(`/appointments/${id}`);
           showSuccess("Appointment deleted.");
@@ -147,7 +265,11 @@ export default function Appointments() {
   }, {});
 
   const StatusBadge = ({ status }) => {
-    const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.PENDING;
+    const cfg = STATUS_CONFIG[status] || {
+      bg: "bg-gray-100",
+      text: "text-gray-600",
+      label: status || "Unknown",
+    };
     return (
       <span className={`text-xs font-medium px-2 py-0.5 rounded-full
         ${cfg.bg} ${cfg.text}`}>
@@ -155,6 +277,7 @@ export default function Appointments() {
       </span>
     );
   };
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -292,7 +415,7 @@ export default function Appointments() {
 
                   {/* Action buttons */}
                   <div className="flex flex-col gap-1.5 ml-4 min-w-fit">
-                    {a.status === "PENDING" && isAdmin && (
+                    {isAdmin && a.status === "REQUESTED" && (
                       <>
                         <button
                           onClick={() => openAction(a, "approve")}
@@ -308,7 +431,60 @@ export default function Appointments() {
                         </button>
                       </>
                     )}
+                    {isAdmin && a.status === "PENDING_APPROVAL" && (
+                      <>
+                        <button
+                          onClick={() => openAction(a, "approve")}
+                          className="bg-blue-600 text-white px-3 py-1
+                            rounded-lg text-xs hover:bg-blue-700">
+                          ✓ Approve
+                        </button>
+                        <button
+                          onClick={() => openAction(a, "reject")}
+                          className="bg-red-500 text-white px-3 py-1
+                            rounded-lg text-xs hover:bg-red-600">
+                          ✗ Reject
+                        </button>
+                      </>
+                    )}
+
                     {a.status === "APPROVED" && isAdmin && (
+                      <button
+                        onClick={() => openAction(a, "check-in")}
+                        className="bg-indigo-600 text-white px-3 py-1
+                          rounded-lg text-xs hover:bg-indigo-700">
+                        ✓ Check-in
+                      </button>
+                    )}
+
+                    {a.status === "CHECKED_IN" && isAdmin && (
+                      <button
+                        onClick={() => openAction(a, "waiting")}
+                        className="bg-purple-600 text-white px-3 py-1
+                          rounded-lg text-xs hover:bg-purple-700">
+                        ✓ Waiting
+                      </button>
+                    )}
+
+                    {a.status === "WAITING" && isAdmin && (
+                      <button
+                        onClick={() => openAction(a, "in-consultation")}
+                        className="bg-cyan-600 text-white px-3 py-1
+                          rounded-lg text-xs hover:bg-cyan-700">
+                        ✓ Start consult
+                      </button>
+                    )}
+
+                    {a.status === "IN_CONSULTATION" && isAdmin && (
+                      <button
+                        onClick={() => openAction(a, "prescription-issued")}
+                        className="bg-teal-600 text-white px-3 py-1
+                          rounded-lg text-xs hover:bg-teal-700">
+                        ✓ Prescription issued
+                      </button>
+                    )}
+
+                    {(a.status === "IN_CONSULTATION" || a.status === "PRESCRIPTION_ISSUED") && isAdmin && (
                       <button
                         onClick={() => openAction(a, "complete")}
                         className="bg-green-600 text-white px-3 py-1
@@ -316,7 +492,8 @@ export default function Appointments() {
                         ✓ Complete
                       </button>
                     )}
-                    {!["COMPLETED","CANCELLED","REJECTED"].includes(a.status) && (
+
+                    {a.status === "APPROVED" && isAdmin && (
                       <button
                         onClick={() => openAction(a, "cancel")}
                         className="border border-yellow-400 text-yellow-700
@@ -324,6 +501,17 @@ export default function Appointments() {
                         Cancel
                       </button>
                     )}
+
+                    {(a.status === "APPROVED" || a.status === "WAITING") && isAdmin && (
+                      <button
+                        onClick={() => openAction(a, "no-show")}
+                        className="border border-gray-400 text-gray-700
+                          px-3 py-1 rounded-lg text-xs hover:bg-gray-50">
+                        Mark no-show
+                      </button>
+                    )}
+
+
                     <button
                       onClick={() => openAction(a, "delete")}
                       className="border border-red-300 text-red-500
@@ -339,16 +527,40 @@ export default function Appointments() {
 
         {/* Schedule Appointment modal */}
         {showForm && (
-          <Modal title="Schedule Appointment"
+      <Modal title="Schedule Appointment"
             onClose={() => setShowForm(false)}>
             <form onSubmit={handleSubmit} className="space-y-3">
-              <FormField label="Patient ID *" field="patientId"
+              {/* Edit C — the form field in the modal */}
+              <FormField label="Patient Number *" field="patientNumber"
                 form={form} setForm={setForm}
-                type="number" required placeholder="Enter patient ID" />
+                type="text" required placeholder="e.g. PT-00002" />
+
+              {/* Doctor dropdown (required for AppointmentDto.doctorId) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Doctor *
+                </label>
+                <select
+                  value={form.doctorId}
+                  onChange={(e) => setForm({ ...form, doctorId: e.target.value })}
+                  required
+                  className="border border-gray-300 rounded-lg p-2 w-full text-sm
+                    focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="">{doctorsLoading ? "Loading doctors..." : "Select a doctor"}</option>
+                  {(doctors || []).map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name || d.username || d.fullName || `Doctor #${d.id}`}
+                    </option>
+                  ))}
+                </select>
+                {doctorsError && <p className="text-red-500 text-sm mt-1">{doctorsError}</p>}
+              </div>
+
               <FormField label="Date *" field="appointmentDate"
                 form={form} setForm={setForm} type="date" required />
               <FormField label="Time *" field="appointmentTime"
                 form={form} setForm={setForm} type="time" required />
+
               <div>
                 <label className="block text-sm font-medium
                   text-gray-700 mb-1">Remarks</label>
@@ -450,7 +662,7 @@ export default function Appointments() {
                   ${actionType === "approve"  ? "bg-blue-600"  :
                     actionType === "complete" ? "bg-green-600" :
                     actionType === "reject"   ? "bg-red-500"   :
-                    actionType === "cancel"   ? "bg-yellow-600":
+                    actionType === "cancel"   ? "bg-yellow-600" :
                     "bg-red-600"}`}>
                 {submitting ? "Processing..." :
                   actionType === "approve"  ? "Approve"  :

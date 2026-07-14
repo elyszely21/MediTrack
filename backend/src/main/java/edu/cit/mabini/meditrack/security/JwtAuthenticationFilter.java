@@ -33,6 +33,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     userDetails, null, userDetails.getAuthorities());
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(authentication);
+
+            // Temporary debug logging for authority diagnosis
+            // Expected: Authorities: [ROLE_SUPER_ADMIN]
+            String dbRole = (userDetails instanceof CustomUserDetails) ? ((CustomUserDetails) userDetails).getRole() : null;
+            System.out.println("[JWT] username/email: " + authentication.getName());
+            System.out.println("[JWT] database role value: " + dbRole);
+            System.out.println("[JWT] generated authorities: " + authentication.getAuthorities());
+
+
         }
         filterChain.doFilter(request, response);
     }

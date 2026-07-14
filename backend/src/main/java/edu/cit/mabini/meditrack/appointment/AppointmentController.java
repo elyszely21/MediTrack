@@ -5,9 +5,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import edu.cit.mabini.meditrack.patient.PatientLookupDto;
+
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+
 
 @RestController
 @RequestMapping("/api/appointments")
@@ -46,9 +49,15 @@ public class AppointmentController {
     @GetMapping("/status/{status}")
     public ResponseEntity<List<AppointmentDto>> getByStatus(
             @PathVariable String status) {
-        return ResponseEntity.ok(
-            appointmentService.getAppointmentsByStatus(status));
+        Appointment.AppointmentStatus enumStatus;
+        try {
+            enumStatus = Appointment.AppointmentStatus.valueOf(status.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(List.of());
+        }
+        return ResponseEntity.ok(appointmentService.getAppointmentsByStatus(enumStatus));
     }
+
 
     // ── Create ────────────────────────────────────────────────────────────────
 
@@ -126,11 +135,78 @@ public class AppointmentController {
         }
     }
 
+    // ── Appointment workflow ─────────────────────────────────────────────────
+
+    @PutMapping("/{id}/check-in")
+    public ResponseEntity<?> checkIn(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(appointmentService.checkInAppointment(id));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
+        }
+    }
+
+    @PutMapping("/{id}/waiting")
+    public ResponseEntity<?> waiting(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(appointmentService.waitingAppointment(id));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
+        }
+    }
+
+    @PutMapping("/{id}/in-consultation")
+    public ResponseEntity<?> inConsultation(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(appointmentService.startConsultationAppointment(id));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
+        }
+    }
+
+    @PutMapping("/{id}/prescription-issued")
+    public ResponseEntity<?> prescriptionIssued(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(appointmentService.issuePrescriptionAppointment(id));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
+        }
+    }
+
+    @PutMapping("/{id}/no-show")
+    public ResponseEntity<?> noShow(
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, String> body) {
+        try {
+            String reason = body != null ? body.get("reason") : null;
+            return ResponseEntity.ok(appointmentService.noShowAppointment(id, reason));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
+        }
+    }
+
     // ── Delete ────────────────────────────────────────────────────────────────
+
+    @GetMapping("/lookup-patient/{patientNumber}")
+    public ResponseEntity<?> lookupPatientByNumber(@PathVariable String patientNumber) {
+        try {
+            PatientLookupDto dto = appointmentService.lookupPatientByNumber(patientNumber);
+            return ResponseEntity.ok(dto);
+        } catch (IllegalArgumentException ex) {
+            if ("Patient not found".equals(ex.getMessage())) {
+                return ResponseEntity.status(404).body(Map.of("message", "Patient not found"));
+            }
+            return ResponseEntity.status(500).body(Map.of("message", "Unexpected server error"));
+        } catch (Exception ex) {
+            return ResponseEntity.status(500).body(Map.of("message", "Unexpected server error"));
+        }
+    }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         appointmentService.deleteAppointment(id);
         return ResponseEntity.noContent().build();
     }
+
 }
+

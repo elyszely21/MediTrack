@@ -24,6 +24,34 @@ public class PatientController {
         return ResponseEntity.ok(patientService.getPatient(id));
     }
 
+    @GetMapping("/archived")
+    public ResponseEntity<List<PatientDto>> getArchivedPatients() {
+        return ResponseEntity.ok(patientService.findArchivedPatients());
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<PatientDto>> search(
+            @RequestParam String q,
+            @RequestParam(defaultValue = "false") boolean archived) {
+        return ResponseEntity.ok(patientService.searchPatients(q, archived));
+    }
+
+    @GetMapping("/by-number/{patientNumber}")
+    public ResponseEntity<PatientDto> getByPatientNumber(
+            @PathVariable String patientNumber) {
+        return ResponseEntity.ok(patientService.getPatientByNumber(patientNumber));
+    }
+
+    @PutMapping("/{id}/archive")
+    public ResponseEntity<PatientDto> archive(@PathVariable Long id) {
+        return ResponseEntity.ok(patientService.archivePatient(id));
+    }
+
+    @PutMapping("/{id}/unarchive")
+    public ResponseEntity<PatientDto> unarchive(@PathVariable Long id) {
+        return ResponseEntity.ok(patientService.unarchivePatient(id));
+    }
+
     @PostMapping
     public ResponseEntity<PatientDto> createPatient(@Valid @RequestBody PatientDto dto) {
         return ResponseEntity.status(201).body(patientService.createPatient(dto));

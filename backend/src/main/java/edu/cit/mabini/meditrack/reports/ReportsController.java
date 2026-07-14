@@ -13,7 +13,7 @@ public class ReportsController {
     private final ReportsService reportsService;
 
     @GetMapping("/summary")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     
     public ResponseEntity<DashboardSummaryDto> getSummary() {
         return ResponseEntity.ok(reportsService.getSummary());

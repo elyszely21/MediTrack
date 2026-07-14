@@ -142,7 +142,7 @@ export default function AdminDashboard() {
                 total={summary?.totalAppointments}
                 color="bg-yellow-400" />
               <StatusBar label="Approved"
-                value={summary?.scheduledAppointments}
+                value={summary?.approvedAppointments}
                 total={summary?.totalAppointments}
                 color="bg-blue-500" />
               <StatusBar label="Completed"

@@ -58,6 +58,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/login",
                                  "/api/auth/register").permitAll()
+                .requestMatchers("/api/appointments/lookup-patient/**").permitAll()
                 .requestMatchers("/api/reports/**").hasRole("SUPER_ADMIN")
                 .requestMatchers("/api/auth/admin/**").hasRole("SUPER_ADMIN")
                 .requestMatchers("/api/users/**").hasRole("SUPER_ADMIN")
@@ -73,6 +74,7 @@ public class SecurityConfig {
                 ).hasAnyRole("SUPER_ADMIN", "NURSE", "DOCTOR")
                 .anyRequest().authenticated()
             )
+
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthenticationFilter,
                 UsernamePasswordAuthenticationFilter.class)
