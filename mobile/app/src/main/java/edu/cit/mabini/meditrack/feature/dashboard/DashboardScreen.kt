@@ -25,7 +25,7 @@ fun DashboardScreen(
     onNavigateToRegisterNurse: () -> Unit
 ) {
     val role = viewModel.getRole()
-    val isStaff = role == "SUPER_ADMIN" || role == "NURSE"
+    val isStaff = role == "SUPER_ADMIN" || role == "NURSE" || role == "DOCTOR"
 
     Scaffold(
         containerColor = Color(0xFF0D1117)

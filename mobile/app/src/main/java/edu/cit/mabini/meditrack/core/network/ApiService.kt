@@ -3,6 +3,8 @@ package edu.cit.mabini.meditrack.core.network
 import edu.cit.mabini.meditrack.feature.medicalrecords.data.model.MedicalRecordDto
 import edu.cit.mabini.meditrack.feature.appointments.data.model.AppointmentDto
 import edu.cit.mabini.meditrack.feature.patients.data.model.PatientDto
+import edu.cit.mabini.meditrack.feature.patients.data.model.PatientLookupDto
+import edu.cit.mabini.meditrack.feature.doctors.data.model.DoctorDto
 import edu.cit.mabini.meditrack.feature.auth.RegisterRequest
 import edu.cit.mabini.meditrack.feature.auth.LoginResponse
 import edu.cit.mabini.meditrack.feature.auth.LoginRequest
@@ -59,6 +61,56 @@ interface ApiService {
     @PUT("appointments/{id}")
     suspend fun updateAppointment(@Path("id") id: Long, @Body dto: AppointmentDto): Response<AppointmentDto>
 
+    @PUT("appointments/{id}/approve")
+    suspend fun approveAppointment(@Path("id") id: Long): Response<AppointmentDto>
+
+    @PUT("appointments/{id}/reject")
+    suspend fun rejectAppointment(@Path("id") id: Long, @Body reason: Map<String, String?>): Response<AppointmentDto>
+
+    @PUT("appointments/{id}/check-in")
+    suspend fun checkInAppointment(@Path("id") id: Long): Response<AppointmentDto>
+
+    @PUT("appointments/{id}/waiting")
+    suspend fun waitingAppointment(@Path("id") id: Long): Response<AppointmentDto>
+
+    @PUT("appointments/{id}/in-consultation")
+    suspend fun startConsultationAppointment(@Path("id") id: Long): Response<AppointmentDto>
+
+    @PUT("appointments/{id}/prescription-issued")
+    suspend fun issuePrescriptionAppointment(@Path("id") id: Long): Response<AppointmentDto>
+
+    @PUT("appointments/{id}/complete")
+    suspend fun completeAppointment(@Path("id") id: Long): Response<AppointmentDto>
+
+    @PUT("appointments/{id}/cancel")
+    suspend fun cancelAppointment(@Path("id") id: Long, @Body reason: Map<String, String?>): Response<AppointmentDto>
+
+    @PUT("appointments/{id}/no-show")
+    suspend fun noShowAppointment(@Path("id") id: Long, @Body reason: Map<String, String?>): Response<AppointmentDto>
+
+    @GET("appointments/lookup-patient/{patientNumber}")
+    suspend fun lookupPatientByNumber(@Path("patientNumber") patientNumber: String): Response<PatientLookupDto>
+
+    @GET("appointments/status/{status}")
+    suspend fun getAppointmentsByStatus(@Path("status") status: String): Response<List<AppointmentDto>>
+
     @DELETE("appointments/{id}")
     suspend fun deleteAppointment(@Path("id") id: Long): Response<Unit>
+
+    // Users & Doctors
+    @GET("users")
+    suspend fun getUsers(@Query("role") role: String? = null): Response<List<Map<String, Any>>>
+
+    @GET("doctors")
+    suspend fun getDoctors(): Response<List<DoctorDto>>
+
+    // Patient Portal
+    @GET("patient-portal/me")
+    suspend fun getMyProfile(): Response<PatientDto>
+
+    @GET("patient-portal/appointments")
+    suspend fun getMyAppointments(): Response<List<AppointmentDto>>
+
+    @GET("patient-portal/medical-records")
+    suspend fun getMyRecords(): Response<List<MedicalRecordDto>>
 }

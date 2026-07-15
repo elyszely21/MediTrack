@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -16,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import edu.cit.mabini.meditrack.feature.medicalrecords.data.model.MedicalRecordDto
@@ -35,7 +37,7 @@ fun MedicalRecordsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val actionState by viewModel.actionState.collectAsState()
-    val isStaff = userRole == "SUPER_ADMIN" || userRole == "NURSE"
+    val isStaff = userRole == "SUPER_ADMIN" || userRole == "NURSE" || userRole == "DOCTOR"
 
     var showAddDialog by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -232,4 +234,36 @@ fun AddRecordDialog(
         },
         containerColor = Color(0xFF161B22)
     )
+}
+
+@Composable
+fun DialogField(
+    label: String,
+    value: String,
+    placeholder: String = "",
+    keyboardType: KeyboardType = KeyboardType.Text,
+    singleLine: Boolean = true,
+    onValueChange: (String) -> Unit
+) {
+    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+        Text(label, fontSize = 12.sp, color = Color(0xFF8B949E))
+        Spacer(modifier = Modifier.height(4.dp))
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            placeholder = { Text(placeholder, color = Color(0xFF484F58)) },
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            singleLine = singleLine,
+            shape = RoundedCornerShape(8.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Color(0xFF2196F3),
+                unfocusedBorderColor = Color(0xFF30363D),
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                focusedContainerColor = Color(0xFF21262D),
+                unfocusedContainerColor = Color(0xFF21262D)
+            )
+        )
+    }
 }

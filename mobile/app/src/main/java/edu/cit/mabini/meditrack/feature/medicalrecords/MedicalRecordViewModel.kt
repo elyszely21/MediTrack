@@ -35,7 +35,12 @@ class MedicalRecordViewModel(private val repository: MedicalRecordRepository) : 
         viewModelScope.launch {
             _uiState.value = RecordUiState.Loading
             try {
-                val response = repository.getByPatient(patientId)
+                val response = if (patientId == 0L) {
+                    repository.getMyRecords()
+                } else {
+                    repository.getByPatient(patientId)
+                }
+
                 if (response.isSuccessful) {
                     _uiState.value = RecordUiState.Success(response.body() ?: emptyList())
                 } else {

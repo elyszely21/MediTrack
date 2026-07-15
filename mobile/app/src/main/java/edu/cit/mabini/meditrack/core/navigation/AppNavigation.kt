@@ -81,7 +81,7 @@ fun AppNavigation(context: Context) {
                 onNavigateToAppointments = { navController.navigate("appointments") },
                 onNavigateToRecords = {
                     val role = authViewModel.getRole()
-                    if (role == "SUPER_ADMIN" || role == "NURSE") {
+                    if (role == "SUPER_ADMIN" || role == "NURSE" || role == "DOCTOR") {
                         // Staff go to Patients first or a generic list
                         navController.navigate("patients")
                     } else {
@@ -108,7 +108,6 @@ fun AppNavigation(context: Context) {
             AppointmentsScreen(
                 viewModel = appointmentViewModel,
                 userRole = authViewModel.getRole(),
-                userId = authViewModel.getUserId(),
                 onBack = { navController.popBackStack() }
             )
         }
