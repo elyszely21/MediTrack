@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import axios from "../../shared/api/axios";
-import Navbar from '../../widgets/navbar/Navbar';
+import Layout from "../../widgets/layout/Layout";
 
 const STATUS_CONFIG = {
   REQUESTED:            { bg: "bg-yellow-100", text: "text-yellow-800", label: "Requested" },
@@ -280,11 +280,12 @@ export default function Appointments() {
 
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <main className="max-w-7xl mx-auto px-6 py-8">
+    <Layout>
+      <div className="min-h-screen bg-gray-50">
+        <main className="max-w-7xl mx-auto px-6 py-8">
 
-        {/* Header */}
-        <div className="flex justify-between items-start mb-6">
+          {/* Header */}
+          <div className="flex justify-between items-start mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-800">Appointments</h1>
             <p className="text-gray-500 text-sm mt-1">
@@ -674,8 +675,9 @@ export default function Appointments() {
             </div>
           </Modal>
         )}
-      </main>
-    </div>
+        </main>
+      </div>
+    </Layout>
   );
 }
 

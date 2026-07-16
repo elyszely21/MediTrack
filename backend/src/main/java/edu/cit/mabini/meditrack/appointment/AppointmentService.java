@@ -1,13 +1,17 @@
 package edu.cit.mabini.meditrack.appointment;
 
 import edu.cit.mabini.meditrack.common.audit.AuditLogService;
+import edu.cit.mabini.meditrack.common.exception.AccessDeniedException;
 import edu.cit.mabini.meditrack.patient.Patient;
 import edu.cit.mabini.meditrack.patient.PatientLookupDto;
 import edu.cit.mabini.meditrack.patient.PatientRepository;
 import edu.cit.mabini.meditrack.user.User;
 
 import edu.cit.mabini.meditrack.user.UserRepository;
+import edu.cit.mabini.meditrack.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -41,11 +45,14 @@ public class AppointmentService {
 
 
     public List<AppointmentDto> getAllAppointments() {
+        // Monitoring only for SUPER_ADMIN; staff cannot enumerate all appointments
+        enforceMonitoringReadForStaff();
         return appointmentRepository.findAll()
                 .stream().map(this::toDto).collect(Collectors.toList());
     }
 
     public PatientLookupDto lookupPatientByNumber(String patientNumber) {
+        // Keep existing behavior: this is permitAll() at URL level. No clinical PHI leakage beyond patient name/number.
         return patientRepository.findByPatientNumber(patientNumber)
                 .map(this::toPatientLookupDto)
                 .orElseThrow(() -> new IllegalArgumentException("Patient not found"));
@@ -53,35 +60,47 @@ public class AppointmentService {
 
 
     public List<AppointmentDto> getAppointmentsByDate(LocalDate date) {
+        enforceMonitoringReadForStaff();
         return appointmentRepository.findByAppointmentDate(date)
                 .stream().map(this::toDto).collect(Collectors.toList());
     }
 
     public List<AppointmentDto> getAppointmentsByPatient(Long patientId) {
+        authorizeAppointmentPatientAccess(patientId);
         return appointmentRepository.findByPatientId(patientId)
                 .stream().map(this::toDto).collect(Collectors.toList());
     }
 
     public List<AppointmentDto> getAppointmentsByStatus(Appointment.AppointmentStatus status) {
+        // Monitoring only for SUPER_ADMIN; other roles should not bulk-filter by status.
+        enforceMonitoringReadForStaff();
         return appointmentRepository.findByStatus(status)
                 .stream().map(this::toDto).collect(Collectors.toList());
     }
 
     public AppointmentDto createAppointment(AppointmentDto dto) {
+        // Never trust client doctorId/patientId.
+        Long requestedPatientId = dto.getPatientId();
+        authorizeAppointmentCreateUpdateForDoctor(requestedPatientId);
+
         validateCreateOrUpdateRequest(dto, null);
 
-        Patient patient = patientRepository.findById(dto.getPatientId())
+        Patient patient = patientRepository.findById(requestedPatientId)
                 .orElseThrow(() -> new IllegalArgumentException("Patient not found"));
 
         User doctor = userRepository.findById(dto.getDoctorId())
                 .orElseThrow(() -> new IllegalArgumentException("Doctor not found"));
+
+        // Doctor may only create for their assigned patient (appointment doctor ownership rule)
+        if (!appointmentRepository.existsByPatientIdAndDoctorId(patient.getId(), doctor.getId())) {
+            throw new AccessDeniedException("Doctor is not assigned to this patient");
+        }
 
         validateDoctorAvailability(dto, doctor);
         validateDoctorConflict(dto, doctor);
 
         int queueNumber = nextQueueNumber(dto.getAppointmentDate());
         String appointmentNumber = nextAppointmentNumber(dto.getAppointmentDate());
-
 
 
         Appointment appointment = Appointment.builder()
@@ -119,7 +138,7 @@ public class AppointmentService {
         Appointment appointment = appointmentRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Appointment not found"));
 
-
+        enforceAppointmentOwnershipForMutations(appointment);
 
         validateCreateOrUpdateRequest(dto, appointment);
 
@@ -139,6 +158,13 @@ public class AppointmentService {
                 .orElseThrow(() -> new IllegalArgumentException("Doctor not found"));
         appointment.setDoctor(doctor);
 
+        // Validate new doctor assignment still satisfies ownership
+        if (appointment.getPatient() != null && appointment.getDoctor() != null) {
+            if (!appointmentRepository.existsByPatientIdAndDoctorId(appointment.getPatient().getId(), appointment.getDoctor().getId())) {
+                throw new AccessDeniedException("Doctor is not assigned to this patient");
+            }
+        }
+
         Appointment saved = appointmentRepository.save(appointment);
 
         auditLogService.log(
@@ -154,9 +180,13 @@ public class AppointmentService {
 
     public AppointmentDto approveAppointment(Long id) {
         // Keep existing API behavior ("approve" moves into APPROVED)
+        // Support both legacy PENDING_APPROVAL and the newer REQUESTED flow.
         return transitionToStatus(
                 id,
-                java.util.List.of(Appointment.AppointmentStatus.PENDING_APPROVAL),
+                java.util.List.of(
+                        Appointment.AppointmentStatus.PENDING_APPROVAL,
+                        Appointment.AppointmentStatus.REQUESTED
+                ),
                 Appointment.AppointmentStatus.APPROVED,
                 "APPROVE"
         );
@@ -170,6 +200,8 @@ public class AppointmentService {
     {
         Appointment appointment = appointmentRepository.findById(id)
                 .orElseThrow(() -> new InvalidAppointmentRequestException("Appointment not found"));
+
+        enforceAppointmentOwnershipForMutations(appointment);
 
         if (!fromStatuses.contains(appointment.getStatus())) {
             throw new InvalidAppointmentRequestException(
@@ -239,6 +271,8 @@ public class AppointmentService {
         Appointment appointment = appointmentRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Appointment not found"));
 
+        enforceAppointmentOwnershipForMutations(appointment);
+
         // Valid: APPROVED or WAITING only
         if (appointment.getStatus() != Appointment.AppointmentStatus.APPROVED
                 && appointment.getStatus() != Appointment.AppointmentStatus.WAITING) {
@@ -273,11 +307,11 @@ public class AppointmentService {
 
 
 
-
-
     public AppointmentDto rejectAppointment(Long id, String reason) {
         Appointment appointment = appointmentRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Appointment not found"));
+
+        enforceAppointmentOwnershipForMutations(appointment);
 
         // Valid transitions:
         // REQUESTED -> REJECTED
@@ -317,6 +351,8 @@ public class AppointmentService {
         Appointment appointment = appointmentRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Appointment not found"));
 
+        enforceAppointmentOwnershipForMutations(appointment);
+
         // Valid transitions into COMPLETED:
         // IN_CONSULTATION -> COMPLETED
         // PRESCRIPTION_ISSUED -> COMPLETED
@@ -349,6 +385,8 @@ public class AppointmentService {
         Appointment appointment = appointmentRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Appointment not found"));
 
+        enforceAppointmentOwnershipForMutations(appointment);
+
         // Valid transition: APPROVED -> CANCELLED
         if (appointment.getStatus() != Appointment.AppointmentStatus.APPROVED) {
             throw new InvalidAppointmentRequestException(
@@ -380,9 +418,10 @@ public class AppointmentService {
 
 
     public void deleteAppointment(Long id) {
-        if (!appointmentRepository.existsById(id)) {
-            throw new IllegalArgumentException("Appointment not found");
-        }
+        Appointment appointment = appointmentRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Appointment not found"));
+
+        enforceAppointmentOwnershipForMutations(appointment);
 
         auditLogService.log(
                 "DELETED",
@@ -606,6 +645,150 @@ public class AppointmentService {
                 .build();
     }
 
+    private void enforceMonitoringReadForStaff() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new AccessDeniedException("Not authenticated");
+        }
+        String role = resolveRole(auth);
+        if (!"SUPER_ADMIN".equals(role)) {
+            throw new AccessDeniedException("Only SUPER_ADMIN can monitor all appointments");
+        }
+    }
+
+    private void authorizeAppointmentPatientAccess(Long patientId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new AccessDeniedException("Not authenticated");
+        }
+        String role = resolveRole(auth);
+
+        if ("SUPER_ADMIN".equals(role)) {
+            return;
+        }
+
+        if ("PATIENT".equals(role)) {
+            Long selfPatientId = resolvePatientIdForAuthenticatedPatient(auth.getName());
+            if (!selfPatientId.equals(patientId)) {
+                throw new AccessDeniedException("Access denied to other patients' appointments");
+            }
+            return;
+        }
+
+        if ("DOCTOR".equals(role)) {
+            Long doctorId = resolveAuthenticatedDoctorId(auth);
+            if (!appointmentRepository.existsByPatientIdAndDoctorId(patientId, doctorId)) {
+                throw new AccessDeniedException("Doctor is not assigned to this patient");
+            }
+            return;
+        }
+
+        if ("NURSE".equals(role)) {
+            // Nursing assignment model not present; restrict to SUPER_ADMIN monitoring only.
+            throw new AccessDeniedException("Access denied");
+        }
+
+        throw new AccessDeniedException("Access denied");
+    }
+
+    private void authorizeAppointmentCreateUpdateForDoctor(Long patientId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new AccessDeniedException("Not authenticated");
+        }
+        String role = resolveRole(auth);
+
+        // SUPER_ADMIN can manage hospital appointments (create/update),
+        // while clinical-data security (records/prescriptions/consultations) remains unchanged.
+        if ("SUPER_ADMIN".equals(role)) {
+            return;
+        }
+
+        if (!"DOCTOR".equals(role)) {
+            throw new AccessDeniedException("Only DOCTOR or SUPER_ADMIN can create appointments");
+        }
+
+        Long doctorId = resolveAuthenticatedDoctorId(auth);
+        if (!appointmentRepository.existsByPatientIdAndDoctorId(patientId, doctorId)) {
+            throw new AccessDeniedException("Doctor is not assigned to this patient");
+        }
+    }
+
+    private void enforceAppointmentOwnershipForMutations(Appointment appointment) {
+        if (appointment == null || appointment.getPatient() == null) {
+            throw new AccessDeniedException("Appointment not found");
+        }
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new AccessDeniedException("Not authenticated");
+        }
+
+        String role = resolveRole(auth);
+        Long patientId = appointment.getPatient().getId();
+
+        if ("SUPER_ADMIN".equals(role)) {
+            return;
+        }
+
+        if ("PATIENT".equals(role)) {
+            Long selfPatientId = resolvePatientIdForAuthenticatedPatient(auth.getName());
+            if (!selfPatientId.equals(patientId)) {
+                throw new AccessDeniedException("Access denied to other patients' appointments");
+            }
+            return;
+        }
+
+        if ("DOCTOR".equals(role)) {
+            Long doctorId = appointment.getDoctor() != null ? appointment.getDoctor().getId() : null;
+            if (doctorId == null) {
+                throw new AccessDeniedException("Appointment has no doctor assigned");
+            }
+            Long authenticatedDoctorId = resolveAuthenticatedDoctorId(auth);
+            if (!authenticatedDoctorId.equals(doctorId)) {
+                throw new AccessDeniedException("Doctor is not assigned to this appointment");
+            }
+            // Ensure authoritative relationship: doctor-patient via appointment
+            if (!appointmentRepository.existsByPatientIdAndDoctorId(patientId, authenticatedDoctorId)) {
+                throw new AccessDeniedException("Doctor is not assigned to this patient");
+            }
+            return;
+        }
+
+        if ("NURSE".equals(role)) {
+            throw new AccessDeniedException("NURSE cannot modify appointment clinical workflow");
+        }
+
+        throw new AccessDeniedException("Access denied");
+    }
+
+    private String resolveRole(Authentication auth) {
+        Object principal = auth.getPrincipal();
+        if (principal instanceof CustomUserDetails cud) {
+            return cud.getRole();
+        }
+        return auth.getAuthorities().stream()
+                .findFirst()
+                .map(a -> a.getAuthority())
+                .map(s -> s != null && s.startsWith("ROLE_") ? s.substring("ROLE_".length()) : s)
+                .orElse("");
+    }
+
+    private Long resolveAuthenticatedDoctorId(Authentication auth) {
+        Object principal = auth.getPrincipal();
+        if (principal instanceof CustomUserDetails cud) {
+            return cud.getId();
+        }
+        throw new AccessDeniedException("Invalid authentication principal");
+    }
+
+    private Long resolvePatientIdForAuthenticatedPatient(String email) {
+        Patient patient = patientRepository.findByEmail(email.trim().toLowerCase())
+                .orElseThrow(() -> new AccessDeniedException("No patient profile found for this account"));
+        return patient.getId();
+    }
+
 }
+
 
 
