@@ -1,11 +1,6 @@
 package edu.cit.mabini.meditrack.user;
 
-import edu.cit.mabini.meditrack.patient.Patient;
-
-import edu.cit.mabini.meditrack.patient.PatientService;
-
 import edu.cit.mabini.meditrack.common.audit.AuditLogService;
-
 import edu.cit.mabini.meditrack.auth.RegisterRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -77,6 +72,71 @@ public class UserService {
         return userRepository.findByRole("NURSE");
     }
 
+    // ── Create Nurse ─────────────────────────────────────────────────────────
+
+    public NurseDto createNurse(RegisterNurseRequest request) {
+        // Reuse existing staff creation logic but lock role to NURSE.
+        RegisterRequest staffRequest = new RegisterRequest();
+        staffRequest.setFullName(request.getFullName());
+        staffRequest.setEmail(request.getEmail());
+        staffRequest.setPhoneNumber(request.getContactNumber());
+        staffRequest.setPassword(request.getPassword());
+        staffRequest.setConfirmPassword(request.getConfirmPassword());
+        staffRequest.setRole("NURSE");
+
+        User saved = register(staffRequest);
+
+        // Map doctor-specific fields available on User
+        saved.setLicenseNumber(request.getLicenseNumber());
+        saved.setSpecialization(request.getSpecialization());
+
+        User updated = userRepository.save(saved);
+
+        return toNurseDto(updated);
+    }
+
+    // ── Update Nurse ─────────────────────────────────────────────────────────
+
+    public NurseDto updateNurse(Long id, UpdateNurseRequest request) {
+        User nurse = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Nurse not found"));
+
+        if (!"NURSE".equalsIgnoreCase(nurse.getRole())) {
+            throw new IllegalArgumentException("Cannot edit non-nurse user");
+        }
+
+        String newEmail = request.getEmail().trim().toLowerCase();
+        boolean emailChanged = !nurse.getEmail().equalsIgnoreCase(newEmail);
+        if (emailChanged && userRepository.existsByEmail(newEmail)) {
+            throw new IllegalArgumentException("Email already registered");
+        }
+
+        nurse.setFullName(request.getFullName().trim());
+        nurse.setEmail(newEmail);
+        nurse.setPhoneNumber(request.getContactNumber().trim());
+        nurse.setLicenseNumber(request.getLicenseNumber());
+        nurse.setSpecialization(request.getSpecialization());
+
+        if (request.getPassword() != null && !request.getPassword().isBlank()) {
+            if (!request.getPassword().equals(request.getConfirmPassword())) {
+                throw new IllegalArgumentException("Passwords do not match");
+            }
+            nurse.setPassword(passwordEncoder.encode(request.getPassword()));
+        }
+
+        User saved = userRepository.save(nurse);
+
+        auditLogService.log(
+                "UPDATED",
+                "Nurse",
+                String.valueOf(id),
+                "Nurse updated: " + saved.getFullName()
+                        + " — Role: " + saved.getRole()
+        );
+
+        return toNurseDto(saved);
+    }
+
     // ── Delete user ───────────────────────────────────────────────────────────
 
     public void deleteUser(Long id) {
@@ -92,5 +152,20 @@ public class UserService {
         );
 
         userRepository.deleteById(id);
+    }
+
+    // ── Mapping ─────────────────────────────────────────────────────────────
+
+    private NurseDto toNurseDto(User u) {
+        return NurseDto.builder()
+                .id(u.getId())
+                .fullName(u.getFullName())
+                .email(u.getEmail())
+                .contactNumber(u.getPhoneNumber())
+                .licenseNumber(u.getLicenseNumber())
+                .specialization(u.getSpecialization())
+                .role(u.getRole())
+                .createdAt(u.getCreatedAt())
+                .build();
     }
 }
