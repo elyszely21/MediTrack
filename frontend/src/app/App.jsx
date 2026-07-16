@@ -18,6 +18,24 @@ import './App.css';
 import Prescriptions from '../pages/prescriptions/Prescriptions';
 import Billing from '../pages/billing/Billing';
 import Consultations from "../pages/consultations/Consultations";
+import Unauthorized from "../pages/unauthorized/Unauthorized";
+
+const roleAllows = (requiredRoles, role) => {
+  if (!requiredRoles || requiredRoles.length === 0) return true;
+  return requiredRoles.includes(role);
+};
+
+const RoleGate = ({ allowed, children }) => {
+  const storedUser = localStorage.getItem('meditrackUser');
+  const user = storedUser ? JSON.parse(storedUser) : null;
+  const role = user?.role;
+
+  if (!roleAllows(allowed, role)) {
+    return <Navigate to="/unauthorized" replace />;
+  }
+
+  return children;
+};
 
 function App() {
   return (
@@ -26,6 +44,7 @@ function App() {
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/unauthorized" element={<Unauthorized />} />
 
         <Route element={<ProtectedRoute />}>
           {/* Reachable by every logged-in role */}
@@ -36,21 +55,102 @@ function App() {
 
           {/* Staff-only: PATIENT accounts get bounced back to their dashboard */}
           <Route element={<StaffRoute />}>
-            <Route path="/patients" element={<Patients />} />
-            <Route path="/records" element={<MedicalRecords />} />
-            <Route path="/appointments" element={<Appointments />} />
-            <Route path="/billing" element={<Billing />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/nurses" element={<Nurses />} />
-            <Route path="/doctors" element={<Doctors />} />
-            <Route path="/admin/register-nurse" element={<RegisterNurse />} />
-            <Route path="/prescriptions" element={<Prescriptions />} />
-            <Route path="/consultations" element={<Consultations />} />
+            <Route
+              path="/patients"
+              element={
+                <RoleGate allowed={["SUPER_ADMIN","NURSE","ROLE_DOCTOR"]}>
+                  <Patients />
+                </RoleGate>
+              }
+            />
+            <Route
+              path="/appointments"
+              element={
+                <RoleGate allowed={["SUPER_ADMIN","NURSE","ROLE_DOCTOR"]}>
+                  <Appointments />
+                </RoleGate>
+              }
+            />
+
+
+            {/* Clinical modules hidden by role */}
+            <Route
+              path="/records"
+              element={
+                <RoleGate allowed={["ROLE_DOCTOR"]}>
+                  <MedicalRecords />
+                </RoleGate>
+              }
+            />
+            <Route
+              path="/consultations"
+              element={
+                <RoleGate allowed={["ROLE_DOCTOR"]}>
+                  <Consultations />
+                </RoleGate>
+              }
+            />
+            <Route
+              path="/prescriptions"
+              element={
+                <RoleGate allowed={["ROLE_DOCTOR"]}>
+                  <Prescriptions />
+                </RoleGate>
+              }
+            />
+
+            {/* Billing & Reports/admin pages */}
+            <Route
+              path="/billing"
+              element={
+                <RoleGate allowed={["SUPER_ADMIN"]}>
+                  <Billing />
+                </RoleGate>
+              }
+            />
+            <Route
+              path="/reports"
+              element={
+                <RoleGate allowed={["SUPER_ADMIN"]}>
+                  <Reports />
+                </RoleGate>
+              }
+            />
+
+
+            {/* User management */}
+            <Route
+              path="/nurses"
+              element={
+                <RoleGate allowed={["SUPER_ADMIN"]}>
+                  <Nurses />
+                </RoleGate>
+              }
+            />
+            <Route
+              path="/doctors"
+              element={
+                <RoleGate allowed={["SUPER_ADMIN"]}>
+                  <Doctors />
+                </RoleGate>
+              }
+            />
+            <Route
+              path="/admin/register-nurse"
+              element={
+                <RoleGate allowed={["SUPER_ADMIN"]}>
+                  <RegisterNurse />
+                </RoleGate>
+              }
+            />
           </Route>
+
+          {/* Patient self-service routes would be added under patient dashboard pages */}
         </Route>
       </Routes>
     </Router>
   );
 }
+
 
 export default App;
