@@ -6,24 +6,49 @@ import axios from "../../shared/api/axios";
 export default function DoctorDashboard() {
   const user     = JSON.parse(localStorage.getItem("meditrackUser") || "{}");
   const navigate = useNavigate();
-  const [stats, setStats]   = useState(null);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    todayAppointments: 0,
+    pendingAppointments: 0,
+    upcomingAppointments: 0,
+    totalPatients: 0,
+    totalAppointments: 0,
+  });
 
   useEffect(() => {
-    Promise.all([
-      axios.get("/patients").catch(() => ({ data: [] })),
-      axios.get("/appointments").catch(() => ({ data: [] })),
-      axios.get("/consultations/patient/0").catch(() => ({ data: [] })),
-    ]).then(([patients, appointments, consultations]) => {
-      setStats({
-        totalPatients:     patients.data.length,
-        totalAppointments: appointments.data.length,
-        todayAppointments: appointments.data.filter(a =>
-          a.appointmentDate === new Date().toISOString().split("T")[0]
-        ).length,
-      });
-    }).finally(() => setLoading(false));
+    const todayStr = new Date().toISOString().split("T")[0];
+
+    setLoading(true);
+    axios
+      .get("/appointments")
+      .then((res) => {
+        const list = Array.isArray(res.data)
+          ? res.data
+          : (res.data?.content || []);
+
+        const todayAppointments = list.filter((a) => a.appointmentDate === todayStr);
+        const pendingAppointments = list.filter((a) =>
+          ["REQUESTED", "PENDING_APPROVAL"].includes(a.status)
+        );
+        const upcomingAppointments = list.filter((a) => {
+          const d = a.appointmentDate;
+          if (!d) return false;
+          return String(d) >= todayStr && !["COMPLETED", "CANCELLED", "REJECTED"].includes(a.status);
+        });
+
+        setStats({
+          todayAppointments: todayAppointments.length,
+          pendingAppointments: pendingAppointments.length,
+          upcomingAppointments: upcomingAppointments.length,
+          totalPatients: 0,
+          totalAppointments: list.length,
+        });
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
+
+
 
   const NAV_CARDS = [
     { label: "Patients",       subtitle: "View patient records",          path: "/patients",      icon: "👥", color: "border-blue-400" },
