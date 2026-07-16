@@ -1,10 +1,14 @@
 package edu.cit.mabini.meditrack.consultation;
 
+import edu.cit.mabini.meditrack.appointment.AppointmentRepository;
 import edu.cit.mabini.meditrack.common.audit.AuditLogService;
-
+import edu.cit.mabini.meditrack.common.exception.AccessDeniedException;
 import edu.cit.mabini.meditrack.patient.Patient;
 import edu.cit.mabini.meditrack.patient.PatientRepository;
+import edu.cit.mabini.meditrack.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -16,10 +20,12 @@ import java.util.stream.Collectors;
 public class ConsultationService {
 
     private final ConsultationRepository consultationRepo;
-    private final PatientRepository      patientRepo;
-    private final AuditLogService        auditLogService;
+    private final PatientRepository patientRepo;
+    private final AuditLogService auditLogService;
+    private final AppointmentRepository appointmentRepository;
 
     public List<ConsultationDto> getByPatient(Long patientId) {
+        authorizeDoctorPatientAccess(patientId);
         return consultationRepo.findByPatientId(patientId)
                 .stream()
                 .map(this::toDto)
@@ -27,9 +33,12 @@ public class ConsultationService {
     }
 
     public ConsultationDto create(ConsultationDto dto) {
-        Patient patient = patientRepo.findById(dto.getPatientId())
+        Long requestedPatientId = dto.getPatientId();
+        authorizeDoctorWriteForPatient(requestedPatientId);
+
+        Patient patient = patientRepo.findById(requestedPatientId)
                 .orElseThrow(() -> new RuntimeException(
-                    "Patient not found with ID: " + dto.getPatientId()));
+                    "Patient not found with ID: " + requestedPatientId));
 
         Consultation consultation = Consultation.builder()
                 .patient(patient)
@@ -64,6 +73,9 @@ public class ConsultationService {
                 .orElseThrow(() -> new RuntimeException(
                     "Consultation not found with ID: " + id));
 
+        Long requestedPatientId = consultation.getPatient().getId();
+        authorizeDoctorWriteForPatient(requestedPatientId);
+
         consultation.setChiefComplaint(dto.getChiefComplaint());
         consultation.setVitalSigns(dto.getVitalSigns());
         consultation.setDiagnosis(dto.getDiagnosis());
@@ -87,9 +99,11 @@ public class ConsultationService {
     }
 
     public void delete(Long id) {
-        if (!consultationRepo.existsById(id)) {
-            throw new RuntimeException("Consultation not found with ID: " + id);
-        }
+        Consultation consultation = consultationRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Consultation not found with ID: " + id));
+
+        Long requestedPatientId = consultation.getPatient().getId();
+        authorizeDoctorWriteForPatient(requestedPatientId);
 
         auditLogService.log(
             "DELETED",
@@ -99,6 +113,84 @@ public class ConsultationService {
         );
 
         consultationRepo.deleteById(id);
+    }
+
+    private void authorizeDoctorPatientAccess(Long requestedPatientId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new AccessDeniedException("Not authenticated");
+        }
+
+        String role = resolveRole(auth);
+        if ("SUPER_ADMIN".equals(role)) {
+            throw new AccessDeniedException("SUPER_ADMIN is forbidden to access consultations");
+        }
+
+        if ("DOCTOR".equals(role)) {
+            Long doctorId = resolveAuthenticatedDoctorId(auth);
+            if (!appointmentRepository.existsByPatientIdAndDoctorId(requestedPatientId, doctorId)) {
+                throw new AccessDeniedException("Doctor is not assigned to this patient");
+            }
+            return;
+        }
+
+        if ("PATIENT".equals(role)) {
+            Long selfPatientId = resolvePatientIdForAuthenticatedPatient(auth.getName());
+            if (!selfPatientId.equals(requestedPatientId)) {
+                throw new AccessDeniedException("Access denied to other patients' consultations");
+            }
+            return;
+        }
+
+        if ("NURSE".equals(role)) {
+            // controller method-level grants nurse read, but service-level should allow read-only
+            return;
+        }
+
+        throw new AccessDeniedException("Access denied");
+    }
+
+    private void authorizeDoctorWriteForPatient(Long requestedPatientId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new AccessDeniedException("Not authenticated");
+        }
+
+        String role = resolveRole(auth);
+        if (!"DOCTOR".equals(role)) {
+            throw new AccessDeniedException("Only DOCTOR can create/update/delete consultations");
+        }
+
+        Long doctorId = resolveAuthenticatedDoctorId(auth);
+        if (!appointmentRepository.existsByPatientIdAndDoctorId(requestedPatientId, doctorId)) {
+            throw new AccessDeniedException("Doctor is not assigned to this patient");
+        }
+    }
+
+    private String resolveRole(Authentication auth) {
+        Object principal = auth.getPrincipal();
+        if (principal instanceof CustomUserDetails cud) {
+            return cud.getRole();
+        }
+        return auth.getAuthorities().stream()
+                .findFirst()
+                .map(a -> a.getAuthority())
+                .map(s -> s != null && s.startsWith("ROLE_") ? s.substring("ROLE_".length()) : s)
+                .orElse("");
+    }
+
+    private Long resolveAuthenticatedDoctorId(Authentication auth) {
+        Object principal = auth.getPrincipal();
+        if (principal instanceof CustomUserDetails cud) {
+            return cud.getId();
+        }
+        throw new AccessDeniedException("Invalid authentication principal");
+    }
+
+    private Long resolvePatientIdForAuthenticatedPatient(String email) {
+        Patient patient = patientRepo.findByEmail(email.trim().toLowerCase())
+                .orElseThrow(() -> new AccessDeniedException("No patient profile found for this account"));
+        return patient.getId();
     }
 
     private ConsultationDto toDto(Consultation c) {
@@ -118,3 +210,4 @@ public class ConsultationService {
         return dto;
     }
 }
+

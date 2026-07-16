@@ -3,7 +3,9 @@ package edu.cit.mabini.meditrack.consultation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
 
 import java.util.List;
 
@@ -15,16 +17,19 @@ public class ConsultationController {
     private final ConsultationService consultationService;
 
     @GetMapping("/patient/{patientId}")
+    @PreAuthorize("hasAnyRole('DOCTOR','NURSE')")
     public ResponseEntity<List<ConsultationDto>> getByPatient(@PathVariable Long patientId) {
         return ResponseEntity.ok(consultationService.getByPatient(patientId));
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('DOCTOR')")
     public ResponseEntity<ConsultationDto> create(@Valid @RequestBody ConsultationDto dto) {
         return ResponseEntity.status(201).body(consultationService.create(dto));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('DOCTOR')")
     public ResponseEntity<ConsultationDto> update(
             @PathVariable Long id,
             @Valid @RequestBody ConsultationDto dto) {
@@ -32,6 +37,7 @@ public class ConsultationController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('DOCTOR')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         consultationService.delete(id);
         return ResponseEntity.noContent().build();
