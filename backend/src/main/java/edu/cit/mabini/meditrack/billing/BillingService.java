@@ -1,12 +1,15 @@
 package edu.cit.mabini.meditrack.billing;
 
-import edu.cit.mabini.meditrack.common.audit.AuditLogService;
-
 import edu.cit.mabini.meditrack.appointment.Appointment;
-import edu.cit.mabini.meditrack.patient.Patient;
 import edu.cit.mabini.meditrack.appointment.AppointmentRepository;
+import edu.cit.mabini.meditrack.common.audit.AuditLogService;
+import edu.cit.mabini.meditrack.common.exception.AccessDeniedException;
+import edu.cit.mabini.meditrack.patient.Patient;
 import edu.cit.mabini.meditrack.patient.PatientRepository;
+import edu.cit.mabini.meditrack.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,13 +21,14 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BillingService {
 
-    private final BillRepository        billRepository;
-    private final PaymentRepository     paymentRepository;
-    private final PatientRepository     patientRepository;
+    private final BillRepository billRepository;
+    private final PaymentRepository paymentRepository;
+    private final PatientRepository patientRepository;
     private final AppointmentRepository appointmentRepository;
-    private final AuditLogService       auditLogService;
+    private final AuditLogService auditLogService;
 
     public List<BillDto> getBillsByPatient(Long patientId) {
+        authorizeBillingRead(patientId);
         return billRepository.findByPatientId(patientId)
                 .stream()
                 .map(this::toDto)
@@ -32,6 +36,8 @@ public class BillingService {
     }
 
     public BillDto createBill(BillDto dto) {
+        authorizeBillingWrite(dto.getPatientId());
+
         Patient patient = patientRepository.findById(dto.getPatientId())
                 .orElseThrow(() -> new IllegalArgumentException("Patient not found"));
 
@@ -67,9 +73,10 @@ public class BillingService {
     }
 
     public void deleteBill(Long id) {
-        if (!billRepository.existsById(id)) {
-            throw new IllegalArgumentException("Bill not found");
-        }
+        Bill bill = billRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Bill not found"));
+
+        authorizeBillingDelete(bill.getPatient().getId());
 
         auditLogService.log(
             "DELETED",
@@ -82,6 +89,11 @@ public class BillingService {
     }
 
     public List<PaymentDto> getPayments(Long billId) {
+        Bill bill = billRepository.findById(billId)
+                .orElseThrow(() -> new IllegalArgumentException("Bill not found"));
+
+        authorizeBillingRead(bill.getPatient().getId());
+
         return paymentRepository.findByBillIdOrderByPaymentDateAsc(billId)
                 .stream()
                 .map(this::toDto)
@@ -92,6 +104,8 @@ public class BillingService {
     public PaymentDto recordPayment(Long billId, PaymentDto dto) {
         Bill bill = billRepository.findById(billId)
                 .orElseThrow(() -> new IllegalArgumentException("Bill not found"));
+
+        authorizeBillingWrite(bill.getPatient().getId());
 
         if (dto.getAmountPaid().compareTo(bill.getBalance()) > 0) {
             throw new IllegalArgumentException(
@@ -128,6 +142,65 @@ public class BillingService {
         return toDto(saved);
     }
 
+    private void authorizeBillingRead(Long patientId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new AccessDeniedException("Not authenticated");
+        }
+
+        String role = resolveRole(auth);
+        if ("SUPER_ADMIN".equals(role)) {
+            return;
+        }
+
+        if ("PATIENT".equals(role)) {
+            Long selfPatientId = resolvePatientIdForAuthenticatedPatient(auth.getName());
+            if (!selfPatientId.equals(patientId)) {
+                throw new AccessDeniedException("Access denied to other patients' billing");
+            }
+            return;
+        }
+
+        // Doctor + Nurse forbidden
+        throw new AccessDeniedException("Access denied");
+    }
+
+    private void authorizeBillingWrite(Long patientId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new AccessDeniedException("Not authenticated");
+        }
+
+        String role = resolveRole(auth);
+        if ("SUPER_ADMIN".equals(role)) {
+            return;
+        }
+
+        throw new AccessDeniedException("Only SUPER_ADMIN can manage billing");
+    }
+
+    private void authorizeBillingDelete(Long patientId) {
+        authorizeBillingWrite(patientId);
+    }
+
+    private String resolveRole(Authentication auth) {
+        Object principal = auth.getPrincipal();
+        if (principal instanceof CustomUserDetails cud) {
+            return cud.getRole();
+        }
+        return auth.getAuthorities().stream()
+                .findFirst()
+                .map(a -> a.getAuthority())
+                .map(s -> s != null && s.startsWith("ROLE_") ? s.substring("ROLE_".length()) : s)
+                .orElse("");
+    }
+
+    private Long resolvePatientIdForAuthenticatedPatient(String email) {
+        Patient patient = patientRepository.findByEmail(email.trim().toLowerCase())
+                .orElseThrow(() -> new AccessDeniedException("No patient profile found for this account"));
+        return patient.getId();
+    }
+
     private BillDto toDto(Bill bill) {
         return BillDto.builder()
                 .id(bill.getId())
@@ -155,3 +228,4 @@ public class BillingService {
                 .build();
     }
 }
+

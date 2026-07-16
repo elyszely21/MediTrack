@@ -5,6 +5,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class AuditLogService {
@@ -18,7 +20,8 @@ public class AuditLogService {
             if (auth != null && auth.isAuthenticated()) {
                 performedBy = auth.getName();
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
 
         AuditLog log = AuditLog.builder()
                 .action(action)
@@ -29,5 +32,9 @@ public class AuditLogService {
                 .build();
 
         auditLogRepo.save(log);
+    }
+
+    public List<AuditLog> getRecentAuditLogs() {
+        return auditLogRepo.findTop20ByOrderByPerformedAtDesc();
     }
 }
