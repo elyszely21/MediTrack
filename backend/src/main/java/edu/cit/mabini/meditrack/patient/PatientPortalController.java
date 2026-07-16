@@ -63,4 +63,23 @@ public class PatientPortalController {
             return ResponseEntity.status(404).body(java.util.Map.of("message", ex.getMessage()));
         }
     }
+
+    @GetMapping("/billing")
+    public ResponseEntity<?> getMyBilling(Authentication authentication) {
+        try {
+            return ResponseEntity.ok(patientPortalService.getMyBilling(authentication.getName()));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(404).body(java.util.Map.of("message", ex.getMessage()));
+        }
+    }
+
+    @GetMapping("/access-history")
+    public ResponseEntity<?> getMyAccessHistory(Authentication authentication) {
+        try {
+            return ResponseEntity.ok(patientPortalService.getMyAccessHistory(authentication.getName()));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(404).body(java.util.Map.of("message", ex.getMessage()));
+        }
+    }
+
 }
