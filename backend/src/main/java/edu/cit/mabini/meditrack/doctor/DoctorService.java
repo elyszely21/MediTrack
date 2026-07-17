@@ -123,4 +123,15 @@ public class DoctorService {
                 .createdAt(u.getCreatedAt())
                 .build();
     }
+
+    public List<DoctorScheduleDto> getDoctorsForSchedule() {
+        return userRepository.findByRole("DOCTOR").stream()
+                .map(u -> DoctorScheduleDto.builder()
+                        .id(u.getId())
+                        .fullName(u.getFullName())
+                        .specialization(u.getSpecialization())
+                        .licenseNumber(u.getLicenseNumber())
+                        .build())
+                .toList();
+    }
 }

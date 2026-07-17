@@ -42,5 +42,11 @@ public class DoctorController {
         doctorService.deleteDoctor(id);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/schedule")
+    @PreAuthorize("hasAnyRole('DOCTOR','NURSE','SUPER_ADMIN','PATIENT')")
+    public ResponseEntity<List<DoctorScheduleDto>> getDoctorsForSchedule() {
+        return ResponseEntity.ok(doctorService.getDoctorsForSchedule());
+    }
 }
 
