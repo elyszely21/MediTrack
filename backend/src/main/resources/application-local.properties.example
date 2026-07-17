@@ -1,8 +1,0 @@
-# Copy this file to application-local.properties (already gitignored) and
-# fill in your real values. Never commit application-local.properties.
-
-spring.datasource.url=jdbc:postgresql://YOUR-SUPABASE-HOST:5432/postgres
-spring.datasource.username=YOUR_DB_USERNAME
-spring.datasource.password=YOUR_DB_PASSWORD
-
-meditrack.jwt.secret=YOUR_RANDOM_JWT_SECRET
