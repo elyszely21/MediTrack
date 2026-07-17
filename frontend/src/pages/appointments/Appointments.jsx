@@ -34,7 +34,9 @@ const STATUS_FILTERS = [
 
 export default function Appointments() {
   const user    = JSON.parse(localStorage.getItem("meditrackUser") || "{}");
-  const isAdmin = user?.role === "SUPER_ADMIN";
+  const role     = user?.role;
+  const isAdmin  = role === "SUPER_ADMIN";
+  const isStaff  = role === "SUPER_ADMIN" || role === "DOCTOR" || role === "NURSE";
 
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading]           = useState(true);
@@ -46,7 +48,7 @@ export default function Appointments() {
   const [reason, setReason]             = useState("");
   const [submitting, setSubmitting]     = useState(false);
   const [successMsg, setSuccessMsg]     = useState("");
-  
+
   // Edit A — form state
   const [form, setForm] = useState({
     patientNumber: "",
@@ -56,8 +58,12 @@ export default function Appointments() {
     remarks: ""
   });
 
+  // Patient mode: only PATIENT role sees the read-only history view.
+  const isPatient = role === "PATIENT";
+
+
   const [formError, setFormError] = useState("");
-  const [patientId, setPatientId] = useState(null);
+  const [, setPatientId] = useState(null);
 
   // Doctor dropdown (frontend-only; backend already supports doctorId in AppointmentDto)
   const [doctors, setDoctors] = useState([]);
@@ -68,20 +74,8 @@ export default function Appointments() {
     setDoctorsLoading(true);
     setDoctorsError("");
     try {
-      // Try commonly used endpoints. If your backend differs, adjust endpoint(s) only in this file.
-      // 1) /users?role=DOCTOR (common)
-      let res;
-      try {
-        res = await axios.get("/users?role=DOCTOR");
-      } catch {
-        // 2) /doctors (common)
-        res = await axios.get("/doctors");
-      }
-
-      // Support either {content: []} or raw []
-      const list = Array.isArray(res.data)
-        ? res.data
-        : (res.data?.content || []);
+      const res = await axios.get("/doctors/schedule");
+      const list = Array.isArray(res.data) ? res.data : (res.data?.content || []);
       setDoctors(list);
     } catch (e) {
       setDoctorsError(e?.response?.data?.message || "Failed to load doctors.");
@@ -99,16 +93,26 @@ export default function Appointments() {
     setLoading(true);
     setError("");
     try {
-      const res = statusFilter === "ALL"
-        ? await axios.get("/appointments")
-        : await axios.get(`/appointments/status/${statusFilter}`);
+      let res;
+      if (role === "DOCTOR") {
+        const doctorRes = await axios.get("/appointments/doctor/me");
+        let list = doctorRes.data || [];
+        if (statusFilter !== "ALL") {
+          list = list.filter(a => a.status === statusFilter);
+        }
+        res = { data: list };
+      } else {
+        res = statusFilter === "ALL"
+          ? await axios.get("/appointments")
+          : await axios.get(`/appointments/status/${statusFilter}`);
+      }
       setAppointments(res.data);
     } catch {
       setError("Failed to load appointments.");
     } finally {
       setLoading(false);
     }
-  }, [statusFilter]);
+  }, [statusFilter, role]);
 
   useEffect(() => { fetchAppointments(); }, [fetchAppointments]);
   useEffect(() => { fetchDoctors(); }, [fetchDoctors]);
@@ -117,6 +121,19 @@ export default function Appointments() {
   const showSuccess = (msg) => {
     setSuccessMsg(msg);
     setTimeout(() => setSuccessMsg(""), 3000);
+  };
+
+  const actionLabel = (type) => {
+    switch (type) {
+      case "approve":            return "Approve this appointment";
+      case "check-in":           return "Check in this appointment";
+      case "waiting":            return "Move this appointment to waiting";
+      case "in-consultation":    return "Start consultation for this appointment";
+      case "prescription-issued":return "Mark prescription issued for this appointment";
+      case "complete":           return "Mark this appointment as completed";
+      case "no-show":            return "Mark this appointment as no-show";
+      default:                   return "Update this appointment";
+    }
   };
 
   // ── Create ─────────────────────────────────────────────────────────────────
@@ -150,11 +167,11 @@ export default function Appointments() {
       }
 
       const durationMinutes = 30;
-      const startTime = form.appointmentTime; // "HH:mm"
-      const startDate = `${form.appointmentDate}T${startTime}:00`;
-      const endMs = new Date(startDate).getTime() + durationMinutes * 60 * 1000;
-      const endDate = new Date(endMs);
-      const endTime = endDate.toTimeString().slice(0, 5); // "HH:mm"
+      const [year, month, day] = form.appointmentDate.split('-').map(Number);
+      const [hours, minutes] = form.appointmentTime.split(':').map(Number);
+      const startDate = new Date(year, month - 1, day, hours, minutes);
+      const endDate = new Date(startDate.getTime() + durationMinutes * 60 * 1000);
+      const endTime = endDate.toTimeString().slice(0, 5);
 
       await axios.post("/appointments", {
         patientId: resolvedPatientId,
@@ -301,19 +318,21 @@ export default function Appointments() {
 
         {/* Success message */}
         {successMsg && (
-          <div className="bg-green-50 border border-green-200 text-green-700
-            rounded-lg p-3 mb-4 text-sm">
+          <div role="status" aria-live="polite"
+            className="bg-green-50 border border-green-200 text-green-700
+              rounded-lg p-3 mb-4 text-sm">
             ✅ {successMsg}
           </div>
         )}
 
         {/* Error */}
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600
-            rounded-lg p-3 mb-4 text-sm flex justify-between">
+          <div role="alert"
+            className="bg-red-50 border border-red-200 text-red-600
+              rounded-lg p-3 mb-4 text-sm flex justify-between items-center">
             <span>{error}</span>
             <button onClick={fetchAppointments}
-              className="underline">Retry</button>
+              className="underline ml-3 whitespace-nowrap">Retry</button>
           </div>
         )}
 
@@ -371,17 +390,8 @@ export default function Appointments() {
                         #{a.id}
                       </span>
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4
+                  <div className="grid grid-cols-2 md:grid-cols-4
                       gap-3 text-sm">
-                      <div>
-                        <p className="text-gray-500 text-xs">Patient</p>
-                        <p className="font-medium text-gray-800">
-                          {a.patientName || `Patient #${a.patientId}`}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          {a.patientNumber}
-                        </p>
-                      </div>
                       <div>
                         <p className="text-gray-500 text-xs">Date</p>
                         <p className="font-medium text-gray-800">
@@ -402,8 +412,38 @@ export default function Appointments() {
                             : "—"}
                         </p>
                       </div>
+                      <div>
+                        <p className="text-gray-500 text-xs">Doctor</p>
+                        <p className="font-medium text-gray-800">
+                          {a.doctorId ? `Doctor #${a.doctorId}` : "—"}
+                        </p>
+                        {a.appointmentType && (
+                          <p className="text-xs text-gray-400">
+                            {a.appointmentType}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-gray-500 text-xs">Appointment Type</p>
+                        <p className="font-medium text-gray-800">
+                          {a.appointmentType || "—"}
+                        </p>
+                      </div>
+
+                      {!isPatient && (
+                        <div className="md:col-span-2">
+                          <p className="text-gray-500 text-xs">Patient</p>
+                          <p className="font-medium text-gray-800">
+                            {a.patientName || `Patient #${a.patientId}`}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {a.patientNumber}
+                          </p>
+                        </div>
+                      )}
+
                       {a.remarks && (
-                        <div>
+                        <div className={isPatient ? "md:col-span-2" : "md:col-span-4"}>
                           <p className="text-gray-500 text-xs">Remarks</p>
                           <p className="text-gray-700 text-sm truncate
                             max-w-xs">
@@ -412,119 +452,136 @@ export default function Appointments() {
                         </div>
                       )}
                     </div>
+
                   </div>
 
                   {/* Action buttons */}
-                  <div className="flex flex-col gap-1.5 ml-4 min-w-fit">
-                    {isAdmin && a.status === "REQUESTED" && (
+                  <div className="flex flex-col gap-1.5 ml-4 min-w-fit" role="group"
+                    aria-label={`Actions for appointment ${a.id}`}>
+                    {isStaff && a.status === "REQUESTED" && (
                       <>
                         <button
                           onClick={() => openAction(a, "approve")}
+                          aria-label="Approve appointment"
                           className="bg-blue-600 text-white px-3 py-1
-                            rounded-lg text-xs hover:bg-blue-700">
+                            rounded-lg text-xs hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
                           ✓ Approve
                         </button>
                         <button
                           onClick={() => openAction(a, "reject")}
+                          aria-label="Reject appointment"
                           className="bg-red-500 text-white px-3 py-1
-                            rounded-lg text-xs hover:bg-red-600">
+                            rounded-lg text-xs hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-300">
                           ✗ Reject
                         </button>
                       </>
                     )}
-                    {isAdmin && a.status === "PENDING_APPROVAL" && (
+                    {isStaff && a.status === "PENDING_APPROVAL" && (
                       <>
                         <button
                           onClick={() => openAction(a, "approve")}
+                          aria-label="Approve appointment"
                           className="bg-blue-600 text-white px-3 py-1
-                            rounded-lg text-xs hover:bg-blue-700">
+                            rounded-lg text-xs hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
                           ✓ Approve
                         </button>
                         <button
                           onClick={() => openAction(a, "reject")}
+                          aria-label="Reject appointment"
                           className="bg-red-500 text-white px-3 py-1
-                            rounded-lg text-xs hover:bg-red-600">
+                            rounded-lg text-xs hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-300">
                           ✗ Reject
                         </button>
                       </>
                     )}
 
-                    {a.status === "APPROVED" && isAdmin && (
+                    {a.status === "APPROVED" && isStaff && (
                       <button
                         onClick={() => openAction(a, "check-in")}
+                        aria-label="Check in appointment"
                         className="bg-indigo-600 text-white px-3 py-1
-                          rounded-lg text-xs hover:bg-indigo-700">
+                          rounded-lg text-xs hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-300">
                         ✓ Check-in
                       </button>
                     )}
 
-                    {a.status === "CHECKED_IN" && isAdmin && (
+                    {a.status === "CHECKED_IN" && isStaff && (
                       <button
                         onClick={() => openAction(a, "waiting")}
+                        aria-label="Move appointment to waiting"
                         className="bg-purple-600 text-white px-3 py-1
-                          rounded-lg text-xs hover:bg-purple-700">
+                          rounded-lg text-xs hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-300">
                         ✓ Waiting
                       </button>
                     )}
 
-                    {a.status === "WAITING" && isAdmin && (
+                    {a.status === "WAITING" && isStaff && (
                       <button
                         onClick={() => openAction(a, "in-consultation")}
+                        aria-label="Start consultation"
                         className="bg-cyan-600 text-white px-3 py-1
-                          rounded-lg text-xs hover:bg-cyan-700">
+                          rounded-lg text-xs hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-300">
                         ✓ Start consult
                       </button>
                     )}
 
-                    {a.status === "IN_CONSULTATION" && isAdmin && (
+                    {a.status === "IN_CONSULTATION" && isStaff && (
                       <button
                         onClick={() => openAction(a, "prescription-issued")}
+                        aria-label="Mark prescription issued"
                         className="bg-teal-600 text-white px-3 py-1
-                          rounded-lg text-xs hover:bg-teal-700">
+                          rounded-lg text-xs hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-300">
                         ✓ Prescription issued
                       </button>
                     )}
 
-                    {(a.status === "IN_CONSULTATION" || a.status === "PRESCRIPTION_ISSUED") && isAdmin && (
+                    {(a.status === "IN_CONSULTATION" || a.status === "PRESCRIPTION_ISSUED") && isStaff && (
                       <button
                         onClick={() => openAction(a, "complete")}
+                        aria-label="Complete appointment"
                         className="bg-green-600 text-white px-3 py-1
-                          rounded-lg text-xs hover:bg-green-700">
+                          rounded-lg text-xs hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-300">
                         ✓ Complete
                       </button>
                     )}
 
-                    {a.status === "APPROVED" && isAdmin && (
+                    {a.status === "APPROVED" && isStaff && (
                       <button
                         onClick={() => openAction(a, "cancel")}
+                        aria-label="Cancel appointment"
                         className="border border-yellow-400 text-yellow-700
-                          px-3 py-1 rounded-lg text-xs hover:bg-yellow-50">
+                          px-3 py-1 rounded-lg text-xs hover:bg-yellow-50 focus:outline-none focus:ring-2 focus:ring-yellow-300">
                         Cancel
                       </button>
                     )}
 
-                    {(a.status === "APPROVED" || a.status === "WAITING") && isAdmin && (
+                    {(a.status === "APPROVED" || a.status === "WAITING") && isStaff && (
                       <button
                         onClick={() => openAction(a, "no-show")}
+                        aria-label="Mark appointment as no-show"
                         className="border border-gray-400 text-gray-700
-                          px-3 py-1 rounded-lg text-xs hover:bg-gray-50">
+                          px-3 py-1 rounded-lg text-xs hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300">
                         Mark no-show
                       </button>
                     )}
 
 
-                    <button
-                      onClick={() => openAction(a, "delete")}
-                      className="border border-red-300 text-red-500
-                        px-3 py-1 rounded-lg text-xs hover:bg-red-50">
-                      Delete
-                    </button>
+                    {isAdmin && (
+                      <button
+                        onClick={() => openAction(a, "delete")}
+                        aria-label="Delete appointment"
+                        className="border border-red-300 text-red-500
+                          px-3 py-1 rounded-lg text-xs hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-300">
+                        Delete
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
             ))}
           </div>
         )}
+
 
         {/* Schedule Appointment modal */}
         {showForm && (
@@ -597,46 +654,51 @@ export default function Appointments() {
         {actionTarget && (
           <Modal
             title={
-              actionType === "approve"  ? "Approve Appointment"  :
-              actionType === "reject"   ? "Reject Appointment"   :
-              actionType === "complete" ? "Complete Appointment"  :
-              actionType === "cancel"   ? "Cancel Appointment"   :
+              actionType === "approve"            ? "Approve Appointment"   :
+              actionType === "reject"             ? "Reject Appointment"    :
+              actionType === "check-in"           ? "Check-In Appointment"  :
+              actionType === "waiting"            ? "Move to Waiting"       :
+              actionType === "in-consultation"    ? "Start Consultation"    :
+              actionType === "prescription-issued"? "Prescription Issued"   :
+              actionType === "complete"           ? "Complete Appointment"  :
+              actionType === "cancel"             ? "Cancel Appointment"    :
+              actionType === "no-show"            ? "Mark as No-Show"       :
               "Delete Appointment"
             }
             onClose={() => setActionTarget(null)}>
 
             <div className="mb-4">
               <p className="text-gray-600 text-sm mb-3">
-                {actionType === "approve" && (
-                  <>Approve appointment for{" "}
-                    <strong>{actionTarget.patientName}</strong> on{" "}
-                    <strong>{actionTarget.appointmentDate}</strong>?</>
+                {(actionType === "approve" || actionType === "check-in" ||
+                  actionType === "waiting" || actionType === "in-consultation" ||
+                  actionType === "prescription-issued" || actionType === "complete" ||
+                  actionType === "no-show") && (
+                  <>{actionLabel(actionType)} for{" "}
+                    <strong>{actionTarget.patientName || `Patient #${actionTarget.patientId}`}</strong>
+                    {actionTarget.appointmentDate ? <> on <strong>{actionTarget.appointmentDate}</strong></> : null}?</>
                 )}
                 {actionType === "reject" && (
                   <>Reject appointment for{" "}
-                    <strong>{actionTarget.patientName}</strong>?</>
-                )}
-                {actionType === "complete" && (
-                  <>Mark appointment for{" "}
-                    <strong>{actionTarget.patientName}</strong> as completed?</>
+                    <strong>{actionTarget.patientName || `Patient #${actionTarget.patientId}`}</strong>?</>
                 )}
                 {actionType === "cancel" && (
                   <>Cancel appointment for{" "}
-                    <strong>{actionTarget.patientName}</strong>?</>
+                    <strong>{actionTarget.patientName || `Patient #${actionTarget.patientId}`}</strong>?</>
                 )}
                 {actionType === "delete" && (
                   <>Permanently delete appointment for{" "}
-                    <strong>{actionTarget.patientName}</strong>?
+                    <strong>{actionTarget.patientName || `Patient #${actionTarget.patientId}`}</strong>?
                     This cannot be undone.</>
                 )}
               </p>
 
-              {/* Reason input for reject and cancel */}
-              {["reject", "cancel"].includes(actionType) && (
+              {/* Reason input for reject, cancel and no-show */}
+              {["reject", "cancel", "no-show"].includes(actionType) && (
                 <div>
                   <label className="block text-sm font-medium
                     text-gray-700 mb-1">
-                    Reason {actionType === "reject" ? "(optional)" : "(optional)"}
+                    Reason {(actionType === "reject" || actionType === "no-show")
+                      ? "(optional)" : "(optional)"}
                   </label>
                   <textarea
                     rows={2}
@@ -652,23 +714,35 @@ export default function Appointments() {
 
             <div className="flex justify-end gap-2">
               <button onClick={() => setActionTarget(null)}
-                className="px-4 py-2 rounded-lg bg-gray-200 text-sm">
+                disabled={submitting}
+                className="px-4 py-2 rounded-lg bg-gray-200 text-sm
+                  disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-gray-300">
                 Cancel
               </button>
               <button
                 onClick={handleAction}
                 disabled={submitting}
                 className={`px-4 py-2 rounded-lg text-white text-sm
-                  disabled:opacity-60
+                  disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-offset-1
                   ${actionType === "approve"  ? "bg-blue-600"  :
+                    actionType === "check-in" ? "bg-indigo-600" :
+                    actionType === "waiting"  ? "bg-purple-600" :
+                    actionType === "in-consultation" ? "bg-cyan-600" :
+                    actionType === "prescription-issued" ? "bg-teal-600" :
                     actionType === "complete" ? "bg-green-600" :
                     actionType === "reject"   ? "bg-red-500"   :
+                    actionType === "no-show"  ? "bg-gray-600" :
                     actionType === "cancel"   ? "bg-yellow-600" :
                     "bg-red-600"}`}>
                 {submitting ? "Processing..." :
                   actionType === "approve"  ? "Approve"  :
                   actionType === "reject"   ? "Reject"   :
+                  actionType === "check-in" ? "Check-In" :
+                  actionType === "waiting"  ? "Move to Waiting" :
+                  actionType === "in-consultation" ? "Start Consultation" :
+                  actionType === "prescription-issued" ? "Prescription Issued" :
                   actionType === "complete" ? "Complete" :
+                  actionType === "no-show"  ? "Mark No-Show" :
                   actionType === "cancel"   ? "Cancel Appointment" :
                   "Delete"}
               </button>
@@ -706,13 +780,17 @@ function FormField({ label, field, form, setForm, type = "text",
 function Modal({ title, onClose, children }) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 flex
-      items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4
-        max-h-[90vh] overflow-y-auto">
+      items-center justify-center z-50 p-4">
+      <div role="dialog" aria-modal="true" aria-label={title}
+        className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4
+          max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center p-4 border-b">
           <h2 className="text-lg font-semibold">{title}</h2>
-          <button onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+          <button onClick={onClose} aria-label="Close dialog"
+            className="text-gray-400 hover:text-gray-600 text-xl
+              focus:outline-none focus:ring-2 focus:ring-blue-300 rounded">
+            ✕
+          </button>
         </div>
         <div className="p-4">{children}</div>
       </div>
