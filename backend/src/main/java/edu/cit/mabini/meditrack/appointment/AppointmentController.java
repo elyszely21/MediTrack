@@ -6,18 +6,17 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-
 import edu.cit.mabini.meditrack.patient.PatientLookupDto;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
-
 @RestController
 @RequestMapping("/api/appointments")
 @RequiredArgsConstructor
 public class AppointmentController {
+
 
     private final AppointmentService appointmentService;
 
@@ -55,20 +54,21 @@ public class AppointmentController {
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','NURSE','DOCTOR')")
     public ResponseEntity<List<AppointmentDto>> getByStatus(
             @PathVariable String status) {
-        Appointment.AppointmentStatus enumStatus;
         try {
-            enumStatus = Appointment.AppointmentStatus.valueOf(status.trim().toUpperCase());
+            Appointment.AppointmentStatus enumStatus = Appointment.AppointmentStatus.valueOf(
+                    status.trim().toUpperCase());
+            return ResponseEntity.ok(appointmentService.getAppointmentsByStatus(enumStatus));
         } catch (IllegalArgumentException ex) {
-            return ResponseEntity.badRequest().body(List.of());
+            throw new InvalidAppointmentRequestException("Invalid AppointmentStatus: " + status);
         }
-        return ResponseEntity.ok(appointmentService.getAppointmentsByStatus(enumStatus));
     }
+
 
 
     // ── Create ────────────────────────────────────────────────────────────────
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','NURSE','DOCTOR')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','NURSE','DOCTOR','PATIENT')")
     public ResponseEntity<AppointmentDto> create(
             @Valid @RequestBody AppointmentDto dto) {
         return ResponseEntity.status(201)
@@ -206,7 +206,7 @@ public class AppointmentController {
 
 
     @GetMapping("/lookup-patient/{patientNumber}")
-    @PreAuthorize("hasAnyRole('DOCTOR','NURSE')")
+    @PreAuthorize("hasAnyRole('DOCTOR','NURSE','SUPER_ADMIN')")
     public ResponseEntity<?> lookupPatientByNumber(@PathVariable String patientNumber) {
 
         try {
@@ -219,6 +219,28 @@ public class AppointmentController {
             return ResponseEntity.status(500).body(Map.of("message", "Unexpected server error"));
         } catch (Exception ex) {
             return ResponseEntity.status(500).body(Map.of("message", "Unexpected server error"));
+        }
+    }
+
+    @GetMapping("/doctor/dashboard")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<?> getDoctorDashboard() {
+        try {
+            return ResponseEntity.ok(appointmentService.getDoctorDashboardSummary(
+                    org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication()));
+        } catch (Exception ex) {
+            return ResponseEntity.status(500).body(Map.of("message", "Unable to load dashboard"));
+        }
+    }
+
+    @GetMapping("/doctor/me")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<?> getMyAppointments() {
+        try {
+            return ResponseEntity.ok(appointmentService.getMyAppointments(
+                    org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication()));
+        } catch (Exception ex) {
+            return ResponseEntity.status(500).body(Map.of("message", "Unable to load appointments"));
         }
     }
 

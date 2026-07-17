@@ -67,8 +67,28 @@ public class AppointmentService {
 
     public List<AppointmentDto> getAppointmentsByPatient(Long patientId) {
         authorizeAppointmentPatientAccess(patientId);
-        return appointmentRepository.findByPatientId(patientId)
+        List<Appointment> appointments = appointmentRepository.findByPatientId(patientId);
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String role = resolveRole(auth);
+        if ("DOCTOR".equals(role)) {
+            Long doctorId = resolveAuthenticatedDoctorId(auth);
+            appointments = appointments.stream()
+                    .filter(a -> a.getDoctor() != null && doctorId.equals(a.getDoctor().getId()))
+                    .toList();
+        }
+
+        return appointments.stream().map(this::toDto).collect(Collectors.toList());
+    }
+
+    public List<AppointmentDto> getAppointmentsByDoctor(Long doctorId) {
+        return appointmentRepository.findByDoctorId(doctorId)
                 .stream().map(this::toDto).collect(Collectors.toList());
+    }
+
+    public List<AppointmentDto> getMyAppointments(Authentication auth) {
+        Long doctorId = resolveAuthenticatedDoctorId(auth);
+        return getAppointmentsByDoctor(doctorId);
     }
 
     public List<AppointmentDto> getAppointmentsByStatus(Appointment.AppointmentStatus status) {
@@ -81,6 +101,17 @@ public class AppointmentService {
     public AppointmentDto createAppointment(AppointmentDto dto) {
         // Never trust client doctorId/patientId.
         Long requestedPatientId = dto.getPatientId();
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String role = resolveRole(auth);
+
+        if ("PATIENT".equals(role)) {
+            Long selfPatientId = resolvePatientIdForAuthenticatedPatient(auth.getName());
+            if (!selfPatientId.equals(requestedPatientId)) {
+                throw new AccessDeniedException("Patients can only create appointments for themselves");
+            }
+        }
+
         authorizeAppointmentCreateUpdateForDoctor(requestedPatientId);
 
         validateCreateOrUpdateRequest(dto, null);
@@ -91,9 +122,12 @@ public class AppointmentService {
         User doctor = userRepository.findById(dto.getDoctorId())
                 .orElseThrow(() -> new IllegalArgumentException("Doctor not found"));
 
-        // Doctor may only create for their assigned patient (appointment doctor ownership rule)
-        if (!appointmentRepository.existsByPatientIdAndDoctorId(patient.getId(), doctor.getId())) {
-            throw new AccessDeniedException("Doctor is not assigned to this patient");
+        // SUPER_ADMIN and NURSE may assign any doctor to any patient during scheduling.
+        // PATIENT may book with any doctor (no prior assignment required).
+        if (!"SUPER_ADMIN".equals(role) && !"NURSE".equals(role) && !"PATIENT".equals(role)) {
+            if (!appointmentRepository.existsByPatientIdAndDoctorId(patient.getId(), doctor.getId())) {
+                throw new AccessDeniedException("Doctor is not assigned to this patient");
+            }
         }
 
         validateDoctorAvailability(dto, doctor);
@@ -158,10 +192,13 @@ public class AppointmentService {
                 .orElseThrow(() -> new IllegalArgumentException("Doctor not found"));
         appointment.setDoctor(doctor);
 
-        // Validate new doctor assignment still satisfies ownership
-        if (appointment.getPatient() != null && appointment.getDoctor() != null) {
-            if (!appointmentRepository.existsByPatientIdAndDoctorId(appointment.getPatient().getId(), appointment.getDoctor().getId())) {
-                throw new AccessDeniedException("Doctor is not assigned to this patient");
+        String role = resolveRole(SecurityContextHolder.getContext().getAuthentication());
+        // SUPER_ADMIN and NURSE may reassign any doctor to any patient during updates.
+        if (!"SUPER_ADMIN".equals(role) && !"NURSE".equals(role)) {
+            if (appointment.getPatient() != null && appointment.getDoctor() != null) {
+                if (!appointmentRepository.existsByPatientIdAndDoctorId(appointment.getPatient().getId(), appointment.getDoctor().getId())) {
+                    throw new AccessDeniedException("Doctor is not assigned to this patient");
+                }
             }
         }
 
@@ -483,27 +520,24 @@ public class AppointmentService {
         }
 
         // Time validation
-        if (!dto.getEndTime().isAfter(dto.getAppointmentTime())) {
+        // Note: endTime is computed in DTO responses only; entity stores appointmentTime + durationMinutes.
+        // If client-provided endTime is inconsistent, backend will compute the correct value.
+        if (dto.getEndTime() != null && !dto.getEndTime().isAfter(dto.getAppointmentTime())) {
             throw new InvalidAppointmentRequestException("endTime must be after startTime");
+        }
+        long minutesDiff = java.time.Duration.between(
+                dto.getAppointmentTime().atDate(java.time.LocalDate.of(2000, 1, 1)),
+                (dto.getEndTime() != null ? dto.getEndTime() : dto.getAppointmentTime().plusMinutes(dto.getDurationMinutes()))
+                        .atDate(java.time.LocalDate.of(2000, 1, 1))
+        ).toMinutes();
+        if (dto.getEndTime() != null && minutesDiff != dto.getDurationMinutes()) {
+            // Client-provided endTime is inconsistent with durationMinutes.
+            // Backend will compute endTime from appointmentTime + durationMinutes.
         }
 
         // durationMinutes must be greater than zero (also enforced by DTO @Positive)
         if (dto.getDurationMinutes() == null || dto.getDurationMinutes() <= 0) {
             throw new InvalidAppointmentRequestException("durationMinutes must be greater than zero");
-        }
-
-        // durationMinutes must match difference
-        // durationMinutes must match difference between startTime and endTime (computed from entity)
-        long minutesDiff = java.time.Duration.between(
-                dto.getAppointmentTime().atDate(java.time.LocalDate.of(2000, 1, 1)),
-                dto.getEndTime().atDate(java.time.LocalDate.of(2000, 1, 1))
-        ).toMinutes();
-
-
-        if (minutesDiff != dto.getDurationMinutes()) {
-            throw new InvalidAppointmentRequestException(
-                    "durationMinutes must match the difference between startTime and endTime"
-            );
         }
 
         // Enum validation (status transitions are handled via update endpoints)
@@ -628,6 +662,8 @@ public class AppointmentService {
         return AppointmentDto.builder()
                 .id(a.getId())
                 .patientId(a.getPatient().getId())
+                .patientName(a.getPatient().getFirstName() + " " + a.getPatient().getLastName())
+                .patientNumber(a.getPatient().getPatientNumber())
                 .doctorId(a.getDoctor() != null ? a.getDoctor().getId() : null)
                 .appointmentNumber(a.getAppointmentNumber())
                 .appointmentType(a.getAppointmentType())
@@ -651,8 +687,9 @@ public class AppointmentService {
             throw new AccessDeniedException("Not authenticated");
         }
         String role = resolveRole(auth);
-        if (!"SUPER_ADMIN".equals(role)) {
-            throw new AccessDeniedException("Only SUPER_ADMIN can monitor all appointments");
+        // SUPER_ADMIN monitoring + NURSE triage both require a full appointment view.
+        if (!"SUPER_ADMIN".equals(role) && !"NURSE".equals(role)) {
+            throw new AccessDeniedException("Only SUPER_ADMIN and NURSE can monitor all appointments");
         }
     }
 
@@ -663,7 +700,8 @@ public class AppointmentService {
         }
         String role = resolveRole(auth);
 
-        if ("SUPER_ADMIN".equals(role)) {
+        if ("SUPER_ADMIN".equals(role) || "NURSE".equals(role)) {
+            // Clinic-wide triage/oversight requires access to any patient's appointments.
             return;
         }
 
@@ -683,11 +721,6 @@ public class AppointmentService {
             return;
         }
 
-        if ("NURSE".equals(role)) {
-            // Nursing assignment model not present; restrict to SUPER_ADMIN monitoring only.
-            throw new AccessDeniedException("Access denied");
-        }
-
         throw new AccessDeniedException("Access denied");
     }
 
@@ -698,20 +731,27 @@ public class AppointmentService {
         }
         String role = resolveRole(auth);
 
-        // SUPER_ADMIN can manage hospital appointments (create/update),
-        // while clinical-data security (records/prescriptions/consultations) remains unchanged.
-        if ("SUPER_ADMIN".equals(role)) {
+        if ("SUPER_ADMIN".equals(role) || "NURSE".equals(role)) {
             return;
         }
 
-        if (!"DOCTOR".equals(role)) {
-            throw new AccessDeniedException("Only DOCTOR or SUPER_ADMIN can create appointments");
+        if ("PATIENT".equals(role)) {
+            Long selfPatientId = resolvePatientIdForAuthenticatedPatient(auth.getName());
+            if (!selfPatientId.equals(patientId)) {
+                throw new AccessDeniedException("Patients can only create appointments for themselves");
+            }
+            return;
         }
 
-        Long doctorId = resolveAuthenticatedDoctorId(auth);
-        if (!appointmentRepository.existsByPatientIdAndDoctorId(patientId, doctorId)) {
-            throw new AccessDeniedException("Doctor is not assigned to this patient");
+        if ("DOCTOR".equals(role)) {
+            Long doctorId = resolveAuthenticatedDoctorId(auth);
+            if (!appointmentRepository.existsByPatientIdAndDoctorId(patientId, doctorId)) {
+                throw new AccessDeniedException("Doctor is not assigned to this patient");
+            }
+            return;
         }
+
+        throw new AccessDeniedException("Only DOCTOR, SUPER_ADMIN, NURSE or PATIENT can create appointments");
     }
 
     private void enforceAppointmentOwnershipForMutations(Appointment appointment) {
@@ -727,7 +767,9 @@ public class AppointmentService {
         String role = resolveRole(auth);
         Long patientId = appointment.getPatient().getId();
 
-        if ("SUPER_ADMIN".equals(role)) {
+        if ("SUPER_ADMIN".equals(role) || "NURSE".equals(role)) {
+            // NURSE drives the front-desk workflow (approve/reject/check-in/waiting/no-show)
+            // for any appointment, consistent with the controller @PreAuthorize scope.
             return;
         }
 
@@ -753,10 +795,6 @@ public class AppointmentService {
                 throw new AccessDeniedException("Doctor is not assigned to this patient");
             }
             return;
-        }
-
-        if ("NURSE".equals(role)) {
-            throw new AccessDeniedException("NURSE cannot modify appointment clinical workflow");
         }
 
         throw new AccessDeniedException("Access denied");
@@ -786,6 +824,44 @@ public class AppointmentService {
         Patient patient = patientRepository.findByEmail(email.trim().toLowerCase())
                 .orElseThrow(() -> new AccessDeniedException("No patient profile found for this account"));
         return patient.getId();
+    }
+
+    public DoctorDashboardDto getDoctorDashboardSummary(Authentication auth) {
+        Long doctorId = resolveAuthenticatedDoctorId(auth);
+        java.time.LocalDate today = java.time.LocalDate.now();
+
+        List<Appointment> all = appointmentRepository.findByDoctorId(doctorId);
+        List<Appointment> todayAppts = all.stream()
+                .filter(a -> a.getAppointmentDate() != null && a.getAppointmentDate().equals(today))
+                .toList();
+        List<Appointment> pending = all.stream()
+                .filter(a -> a.getStatus() == Appointment.AppointmentStatus.REQUESTED
+                        || a.getStatus() == Appointment.AppointmentStatus.PENDING_APPROVAL)
+                .toList();
+        List<Appointment> upcoming = all.stream()
+                .filter(a -> {
+                    if (a.getAppointmentDate() == null) return false;
+                    String d = a.getAppointmentDate().toString();
+                    return d.compareTo(today.toString()) >= 0
+                            && a.getStatus() != Appointment.AppointmentStatus.COMPLETED
+                            && a.getStatus() != Appointment.AppointmentStatus.CANCELLED
+                            && a.getStatus() != Appointment.AppointmentStatus.REJECTED;
+                })
+                .toList();
+
+        long uniquePatients = all.stream()
+                .map(a -> a.getPatient() != null ? a.getPatient().getId() : null)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .count();
+
+        return DoctorDashboardDto.builder()
+                .todayAppointments(todayAppts.size())
+                .pendingAppointments(pending.size())
+                .upcomingAppointments(upcoming.size())
+                .totalAppointments(all.size())
+                .totalAssignedPatients(uniquePatients)
+                .build();
     }
 
 }
