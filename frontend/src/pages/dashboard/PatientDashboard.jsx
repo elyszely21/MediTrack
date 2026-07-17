@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import Navbar from '../../widgets/navbar/Navbar';
+
 import api from '../../shared/api/axios';
 
 const APPOINTMENT_STATUS_COLORS = {
@@ -50,6 +50,18 @@ const PatientDashboard = () => {
   const [profileForm, setProfileForm] = useState(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileMessage, setProfileMessage] = useState('');
+
+  const [showBooking, setShowBooking] = useState(false);
+  const [bookingForm, setBookingForm] = useState({
+    appointmentDate: '',
+    appointmentTime: '',
+    doctorId: '',
+    remarks: ''
+  });
+  const [doctors, setDoctors] = useState([]);
+  const [bookingSubmitting, setBookingSubmitting] = useState(false);
+  const [bookingMessage, setBookingMessage] = useState('');
+  const [bookingError, setBookingError] = useState('');
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -103,6 +115,59 @@ const PatientDashboard = () => {
     }
   };
 
+  const fetchDoctors = async () => {
+    try {
+      const res = await api.get('/doctors/schedule');
+      setDoctors(res.data || []);
+    } catch {
+      // silent
+    }
+  };
+
+  const handleBookAppointment = async (e) => {
+    e.preventDefault();
+    setBookingSubmitting(true);
+    setBookingMessage('');
+    setBookingError('');
+    try {
+      const durationMinutes = 30;
+      const [hours, minutes] = bookingForm.appointmentTime.split(':').map(Number);
+      const [year, month, day] = bookingForm.appointmentDate.split('-').map(Number);
+      const startDate = new Date(year, month - 1, day, hours, minutes);
+      const endDate = new Date(startDate.getTime() + durationMinutes * 60 * 1000);
+      const endTime = endDate.toTimeString().slice(0, 5);
+
+      await api.post('/appointments', {
+        patientId: profile?.id,
+        doctorId: bookingForm.doctorId,
+        appointmentType: 'CONSULTATION',
+        durationMinutes: durationMinutes,
+        appointmentDate: bookingForm.appointmentDate,
+        appointmentTime: bookingForm.appointmentTime + ':00',
+        endTime: endTime + ':00',
+        remarks: bookingForm.remarks || 'Patient self-booking'
+      });
+
+      setBookingMessage('Appointment booked successfully.');
+      setBookingForm({ appointmentDate: '', appointmentTime: '', doctorId: '', remarks: '' });
+      setShowBooking(false);
+      setTimeout(() => {
+        setBookingMessage('');
+        loadAll();
+      }, 1500);
+    } catch (err) {
+      setBookingError(err.response?.data?.message || 'Could not book appointment.');
+    } finally {
+      setBookingSubmitting(false);
+    }
+  };
+
+  useEffect(() => {
+    if (showBooking) {
+      fetchDoctors();
+    }
+  }, [showBooking]);
+
   const upcomingCount = appointments.filter((a) =>
     ['PENDING', 'APPROVED'].includes(a.status)
   ).length;
@@ -112,8 +177,8 @@ const PatientDashboard = () => {
 
   return (
     <div className="dashboard-page">
-      <Navbar />
       <main className="dashboard-content">
+
         <section className="dashboard-hero">
           <div>
             <p className="eyebrow">Patient portal</p>
@@ -134,7 +199,7 @@ const PatientDashboard = () => {
         )}
 
         {loading ? (
-          <p>Loading your records…</p>
+          <p className="loading-text">Loading your records…</p>
         ) : (
           <>
             <section className="dashboard-grid" style={{ marginBottom: 24 }}>
@@ -156,59 +221,73 @@ const PatientDashboard = () => {
               </article>
             </section>
 
-            <div className="bg-white rounded-xl shadow-xl" style={{ overflow: 'hidden' }}>
-              <div className="flex border-b border-gray-200">
+            <div className="tab-panel">
+              <div className="tab-bar">
                 {TABS.map((tab) => (
                   <button
                     key={tab.key}
                     onClick={() => setActiveTab(tab.key)}
-                    className={`px-4 py-3 text-sm font-medium ${
-                      activeTab === tab.key
-                        ? 'text-blue-600 border-b-2 border-blue-600'
-                        : 'text-gray-500 hover:text-gray-700'
-                    }`}
+                    className={activeTab === tab.key ? 'active' : ''}
                   >
                     {tab.label}
                   </button>
                 ))}
               </div>
 
-              <div style={{ padding: 20 }}>
+              <div style={{ padding: 16 }}>
                 {activeTab === 'appointments' && (
-                  appointments.length === 0 ? (
-                    <p>You have no appointments yet.</p>
-                  ) : (
-                    <table className="data-table">
-                      <thead>
-                        <tr>
-                          <th>Date</th>
-                          <th>Time</th>
-                          <th>Status</th>
-                          <th>Remarks</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {appointments.map((a) => (
-                          <tr key={a.id}>
-                            <td>{a.appointmentDate}</td>
-                            <td>{a.appointmentTime}</td>
-                            <td>
-                              <StatusBadge
-                                status={a.status}
-                                colorMap={APPOINTMENT_STATUS_COLORS}
-                              />
-                            </td>
-                            <td>{a.remarks || '—'}</td>
+                  <>
+                    <div style={{ marginBottom: 16, textAlign: 'right' }}>
+                      <button
+                        onClick={() => setShowBooking(true)}
+                        className="action-button"
+                        style={{ background: '#2563eb', color: 'white' }}
+                      >
+                        + Book Appointment
+                      </button>
+                    </div>
+
+                    {appointments.length === 0 ? (
+                      <div className="empty-state">
+                        <div className="empty-state-icon">📅</div>
+                        <p>You have no appointments yet.</p>
+                      </div>
+                    ) : (
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Status</th>
+                            <th>Remarks</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )
+                        </thead>
+                        <tbody>
+                          {appointments.map((a) => (
+                            <tr key={a.id}>
+                              <td>{a.appointmentDate}</td>
+                              <td>{a.appointmentTime}</td>
+                              <td>
+                                <StatusBadge
+                                  status={a.status}
+                                  colorMap={APPOINTMENT_STATUS_COLORS}
+                                />
+                              </td>
+                              <td>{a.remarks || '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </>
                 )}
 
                 {activeTab === 'prescriptions' && (
                   prescriptions.length === 0 ? (
-                    <p>You have no prescriptions yet.</p>
+                    <div className="empty-state">
+                      <div className="empty-state-icon">💊</div>
+                      <p>You have no prescriptions yet.</p>
+                    </div>
                   ) : (
                     <table className="data-table">
                       <thead>
@@ -246,7 +325,10 @@ const PatientDashboard = () => {
 
                 {activeTab === 'records' && (
                   records.length === 0 ? (
-                    <p>You have no medical records yet.</p>
+                    <div className="empty-state">
+                      <div className="empty-state-icon">📋</div>
+                      <p>You have no medical records yet.</p>
+                    </div>
                   ) : (
                     <table className="data-table">
                       <thead>
@@ -365,6 +447,86 @@ const PatientDashboard = () => {
           </>
         )}
       </main>
+
+      {showBooking && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-4 border-b">
+              <h2 className="text-lg font-semibold">Book Appointment</h2>
+              <button onClick={() => setShowBooking(false)} className="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+            </div>
+            <form onSubmit={handleBookAppointment} className="p-4 space-y-4">
+              {bookingError && (
+                <div role="alert" className="bg-red-50 border border-red-200 text-red-600 rounded-lg p-3 text-sm">
+                  {bookingError}
+                </div>
+              )}
+              {bookingMessage && (
+                <p role="status" className="text-sm text-green-700">{bookingMessage}</p>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Doctor *</label>
+                <select
+                  required
+                  value={bookingForm.doctorId}
+                  onChange={e => setBookingForm({ ...bookingForm, doctorId: e.target.value })}
+                  className="border border-gray-300 rounded-lg p-2 w-full text-sm"
+                >
+                  <option value="">Select doctor</option>
+                  {doctors.map(d => (
+                    <option key={d.id} value={d.id}>
+                      {d.fullName} — {d.specialization}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
+                  <input
+                    type="date"
+                    required
+                    value={bookingForm.appointmentDate}
+                    onChange={e => setBookingForm({ ...bookingForm, appointmentDate: e.target.value })}
+                    className="border border-gray-300 rounded-lg p-2 w-full text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Time *</label>
+                  <input
+                    type="time"
+                    required
+                    value={bookingForm.appointmentTime}
+                    onChange={e => setBookingForm({ ...bookingForm, appointmentTime: e.target.value })}
+                    className="border border-gray-300 rounded-lg p-2 w-full text-sm"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Remarks</label>
+                <textarea
+                  rows={2}
+                  value={bookingForm.remarks}
+                  onChange={e => setBookingForm({ ...bookingForm, remarks: e.target.value })}
+                  className="border border-gray-300 rounded-lg p-2 w-full text-sm"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={() => setShowBooking(false)} className="px-4 py-2 rounded-lg bg-gray-200 text-sm">
+                  Cancel
+                </button>
+                <button type="submit" disabled={bookingSubmitting} className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm disabled:opacity-60">
+                  {bookingSubmitting ? 'Booking...' : 'Book Appointment'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
