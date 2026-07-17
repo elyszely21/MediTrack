@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 
@@ -87,6 +88,21 @@ public class PatientController {
     public ResponseEntity<Void> deletePatient(@PathVariable Long id) {
         patientService.deletePatient(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/staff-lookup")
+    @PreAuthorize("hasAnyRole('DOCTOR','NURSE','SUPER_ADMIN')")
+    public ResponseEntity<List<PatientDto>> staffLookup(
+            Authentication authentication,
+            @RequestParam(required = false) String q) {
+        String role = authentication.getAuthorities().stream()
+                .findFirst()
+                .map(a -> a.getAuthority())
+                .map(s -> s != null && s.startsWith("ROLE_") ? s.substring("ROLE_".length()) : s)
+                .orElse("");
+        Long staffId = authentication.getPrincipal() instanceof edu.cit.mabini.meditrack.security.CustomUserDetails cud
+                ? cud.getId() : null;
+        return ResponseEntity.ok(patientService.findPatientsForStaff(role, staffId, q));
     }
 
 }

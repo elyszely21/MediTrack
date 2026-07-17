@@ -1,5 +1,6 @@
 package edu.cit.mabini.meditrack.patient;
 
+import edu.cit.mabini.meditrack.appointment.AppointmentRepository;
 import edu.cit.mabini.meditrack.common.audit.AuditLogService;
 import edu.cit.mabini.meditrack.auth.RegisterRequest;
 import edu.cit.mabini.meditrack.user.UserRepository;
@@ -18,6 +19,7 @@ public class PatientService {
     private final UserRepository    userRepository;
     private final PasswordEncoder   passwordEncoder;
     private final AuditLogService   auditLogService;
+    private final AppointmentRepository appointmentRepository;
 
     public Patient registerSelf(RegisterRequest request) {
         String email = request.getEmail().trim().toLowerCase();
@@ -170,6 +172,37 @@ public class PatientService {
                 .map(this::toDto)
                 .orElseThrow(() -> new IllegalArgumentException(
                     "No patient found with number: " + patientNumber));
+    }
+
+    public List<PatientDto> findPatientsForStaff(String role, Long staffId, String query) {
+        if (staffId == null) {
+            throw new IllegalArgumentException("Invalid staff identity");
+        }
+
+        List<Patient> patients;
+        if ("SUPER_ADMIN".equals(role) || "NURSE".equals(role)) {
+            patients = patientRepository.findByArchivedFalse();
+        } else if ("DOCTOR".equals(role)) {
+            patients = appointmentRepository.findByDoctorId(staffId).stream()
+                    .map(a -> a.getPatient())
+                    .filter(java.util.Objects::nonNull)
+                    .distinct()
+                    .toList();
+        } else {
+            throw new IllegalArgumentException("Access denied");
+        }
+
+        if (query != null && !query.isBlank()) {
+            String q = query.trim().toLowerCase();
+            return patients.stream()
+                    .filter(p -> (p.getPatientNumber() != null && p.getPatientNumber().toLowerCase().contains(q))
+                            || (p.getFirstName() != null && p.getFirstName().toLowerCase().contains(q))
+                            || (p.getLastName() != null && p.getLastName().toLowerCase().contains(q)))
+                    .map(this::toDto)
+                    .toList();
+        }
+
+        return patients.stream().map(this::toDto).toList();
     }
 
     private PatientDto toDto(Patient patient) {
