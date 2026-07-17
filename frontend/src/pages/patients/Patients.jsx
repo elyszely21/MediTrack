@@ -3,6 +3,10 @@ import Layout from "../../widgets/layout/Layout";
 import axios from "../../shared/api/axios";
 
 export default function Patients() {
+  const user = JSON.parse(localStorage.getItem("meditrackUser") || "{}");
+  const role = user?.role;
+  const isAdmin = role === "SUPER_ADMIN";
+
   const [patients, setPatients]           = useState([]);
   const [loading, setLoading]             = useState(true);
   const [error, setError]                 = useState("");
@@ -27,11 +31,21 @@ export default function Patients() {
     try {
       let res;
       if (searchQuery.trim()) {
-        res = await axios.get(
-          `/patients/search?q=${encodeURIComponent(searchQuery)}&archived=${showArchived}`
-        );
+        if (isAdmin) {
+          res = await axios.get(
+            `/patients/search?q=${encodeURIComponent(searchQuery)}&archived=${showArchived}`
+          );
+        } else {
+          res = await axios.get(
+            `/patients/staff-lookup?q=${encodeURIComponent(searchQuery)}`
+          );
+        }
       } else {
-        res = await axios.get(showArchived ? "/patients/archived" : "/patients");
+        if (isAdmin) {
+          res = await axios.get(showArchived ? "/patients/archived" : "/patients");
+        } else {
+          res = await axios.get("/patients/staff-lookup");
+        }
       }
       setPatients(res.data);
     } catch {
@@ -39,7 +53,7 @@ export default function Patients() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, showArchived]);
+  }, [searchQuery, showArchived, isAdmin]);
 
   useEffect(() => {
     const delay = setTimeout(() => fetchPatients(), 300);
@@ -133,11 +147,13 @@ export default function Patients() {
             {showArchived ? "Showing archived patients" : "Showing active patients"}
           </p>
         </div>
-        <button onClick={openAdd}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg
-            text-sm hover:bg-blue-700">
-          + Add Patient
-        </button>
+        {isAdmin && (
+          <button onClick={openAdd}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg
+              text-sm hover:bg-blue-700">
+            + Add Patient
+          </button>
+        )}
       </div>
 
       {successMsg && (
@@ -169,14 +185,16 @@ export default function Patients() {
                 text-gray-400 hover:text-gray-600">✕</button>
           )}
         </div>
-        <button
-          onClick={() => { setShowArchived(!showArchived); setSearchQuery(""); }}
-          className={`px-4 py-2 rounded-lg text-sm border transition-colors
-            ${showArchived
-              ? "bg-yellow-50 border-yellow-300 text-yellow-700"
-              : "bg-white border-gray-300 text-gray-600 hover:bg-gray-50"}`}>
-          {showArchived ? "📦 Archived" : "👥 Active"}
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => { setShowArchived(!showArchived); setSearchQuery(""); }}
+            className={`px-4 py-2 rounded-lg text-sm border transition-colors
+              ${showArchived
+                ? "bg-yellow-50 border-yellow-300 text-yellow-700"
+                : "bg-white border-gray-300 text-gray-600 hover:bg-gray-50"}`}>
+            {showArchived ? "📦 Archived" : "👥 Active"}
+          </button>
+        )}
       </div>
 
       {/* Stats */}
@@ -207,7 +225,7 @@ export default function Patients() {
               : showArchived ? "No archived patients"
               : "No patients registered yet"}
           </p>
-          {!searchQuery && !showArchived && (
+          {!searchQuery && !showArchived && isAdmin && (
             <button onClick={openAdd}
               className="mt-4 bg-blue-600 text-white px-4 py-2
                 rounded-lg text-sm">
@@ -263,21 +281,25 @@ export default function Patients() {
                   </td>
                   <td className="p-4">
                     <div className="flex gap-2">
-                      {!p.archived && (
+                      {isAdmin && !p.archived && (
                         <button onClick={() => openEdit(p)}
                           className="text-blue-600 hover:underline text-xs">
                           Edit
                         </button>
                       )}
-                      <button onClick={() => setArchiveTarget(p)}
-                        className={`text-xs hover:underline
-                          ${p.archived ? "text-green-600" : "text-yellow-600"}`}>
-                        {p.archived ? "Restore" : "Archive"}
-                      </button>
-                      <button onClick={() => setDeleteTarget(p)}
-                        className="text-red-500 hover:underline text-xs">
-                        Delete
-                      </button>
+                      {isAdmin && (
+                        <button onClick={() => setArchiveTarget(p)}
+                          className={`text-xs hover:underline
+                            ${p.archived ? "text-green-600" : "text-yellow-600"}`}>
+                          {p.archived ? "Restore" : "Archive"}
+                        </button>
+                      )}
+                      {isAdmin && (
+                        <button onClick={() => setDeleteTarget(p)}
+                          className="text-red-500 hover:underline text-xs">
+                          Delete
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -419,13 +441,17 @@ function FormField({ label, field, form, setForm, type="text",
 function Modal({ title, onClose, children }) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 flex
-      items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4
-        max-h-[90vh] overflow-y-auto">
+      items-center justify-center z-50 p-4">
+      <div role="dialog" aria-modal="true" aria-label={title}
+        className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4
+          max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center p-4 border-b">
           <h2 className="text-lg font-semibold">{title}</h2>
-          <button onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+          <button onClick={onClose} aria-label="Close dialog"
+            className="text-gray-400 hover:text-gray-600 text-xl
+              focus:outline-none focus:ring-2 focus:ring-blue-300 rounded">
+            ✕
+          </button>
         </div>
         <div className="p-4">{children}</div>
       </div>

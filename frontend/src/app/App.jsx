@@ -19,11 +19,14 @@ import Prescriptions from '../pages/prescriptions/Prescriptions';
 import Billing from '../pages/billing/Billing';
 import Consultations from "../pages/consultations/Consultations";
 import Unauthorized from "../pages/unauthorized/Unauthorized";
+import Profile from "../pages/profile/Profile";
+import PatientBilling from "../pages/billing/PatientBilling";
 
 const roleAllows = (requiredRoles, role) => {
   if (!requiredRoles || requiredRoles.length === 0) return true;
   return requiredRoles.includes(role);
 };
+
 
 const RoleGate = ({ allowed, children }) => {
   const storedUser = localStorage.getItem('meditrackUser');
@@ -51,33 +54,57 @@ function App() {
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/nurse/dashboard" element={<NurseDashboard />} />
           <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
-          <Route path="/patient/dashboard" element={<PatientDashboard />} />
+          <Route path="/patient/dashboard" element={
+            <RoleGate allowed={["PATIENT"]}>
+              <PatientDashboard />
+            </RoleGate>
+          } />
+          {/* Patient-only profile (portal) */}
+          <Route path="/patient/profile" element={
+            <RoleGate allowed={["PATIENT"]}>
+              <Profile />
+            </RoleGate>
+          } />
+          <Route path="/patient/billing" element={
+            <RoleGate allowed={["PATIENT"]}>
+              <PatientBilling />
+            </RoleGate>
+          } />
+
+
+
+
+
 
           {/* Staff-only: PATIENT accounts get bounced back to their dashboard */}
           <Route element={<StaffRoute />}>
+
             <Route
               path="/patients"
               element={
-                <RoleGate allowed={["SUPER_ADMIN","NURSE","ROLE_DOCTOR"]}>
+                <RoleGate allowed={["SUPER_ADMIN","DOCTOR","NURSE"]}>
                   <Patients />
                 </RoleGate>
               }
             />
+
+            {/* Staff appointments only (PATIENT portal routes are handled under /patient/*) */}
             <Route
               path="/appointments"
               element={
-                <RoleGate allowed={["SUPER_ADMIN","NURSE","ROLE_DOCTOR"]}>
+                <RoleGate allowed={["SUPER_ADMIN","NURSE","DOCTOR"]}>
                   <Appointments />
                 </RoleGate>
               }
             />
 
 
+
             {/* Clinical modules hidden by role */}
             <Route
               path="/records"
               element={
-                <RoleGate allowed={["ROLE_DOCTOR"]}>
+                <RoleGate allowed={["DOCTOR"]}>
                   <MedicalRecords />
                 </RoleGate>
               }
@@ -85,7 +112,7 @@ function App() {
             <Route
               path="/consultations"
               element={
-                <RoleGate allowed={["ROLE_DOCTOR"]}>
+                <RoleGate allowed={["DOCTOR"]}>
                   <Consultations />
                 </RoleGate>
               }
@@ -93,7 +120,7 @@ function App() {
             <Route
               path="/prescriptions"
               element={
-                <RoleGate allowed={["ROLE_DOCTOR"]}>
+                <RoleGate allowed={["DOCTOR"]}>
                   <Prescriptions />
                 </RoleGate>
               }
