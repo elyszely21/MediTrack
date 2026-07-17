@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useState } from "react";
 import Layout from "../../widgets/layout/Layout";
 import axios from "../../shared/api/axios";
 
@@ -526,7 +525,7 @@ export default function Billing() {
               </div>
               <FormField label="Received By" field="receivedBy"
                 form={paymentForm} setForm={setPaymentForm}
-                placeholder="Staff name" />
+                placeholder="Staff name" required />
               <FormField label="Notes" field="notes"
                 form={paymentForm} setForm={setPaymentForm} />
               <ModalActions onCancel={() => setPaymentTarget(null)}
@@ -590,13 +589,17 @@ function FormField({ label, field, form, setForm, type = "text",
 function Modal({ title, onClose, children }) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 flex
-      items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4
-        max-h-[90vh] overflow-y-auto">
+      items-center justify-center z-50 p-4">
+      <div role="dialog" aria-modal="true" aria-label={title}
+        className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4
+          max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center p-4 border-b">
           <h2 className="text-lg font-semibold">{title}</h2>
-          <button onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+          <button onClick={onClose} aria-label="Close dialog"
+            className="text-gray-400 hover:text-gray-600 text-xl
+              focus:outline-none focus:ring-2 focus:ring-blue-300 rounded">
+            ✕
+          </button>
         </div>
         <div className="p-4">{children}</div>
       </div>

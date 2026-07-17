@@ -4,12 +4,12 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 const NAV_ITEMS = [
   { path: "/admin/dashboard",  label: "Dashboard",       icon: "🏠", roles: ["SUPER_ADMIN"] },
   { path: "/nurse/dashboard",  label: "Dashboard",       icon: "🏠", roles: ["NURSE"] },
-  { path: "/doctor/dashboard", label: "Dashboard",       icon: "🏠", roles: ["ROLE_DOCTOR"] },
-  { path: "/patients",         label: "Patients",        icon: "👥", roles: ["SUPER_ADMIN","NURSE","ROLE_DOCTOR"] },
-  { path: "/appointments",     label: "Appointments",    icon: "📅", roles: ["SUPER_ADMIN","NURSE","ROLE_DOCTOR"] },
-  { path: "/records",          label: "Medical Records", icon: "📋", roles: ["SUPER_ADMIN","NURSE","ROLE_DOCTOR"] },
-  { path: "/consultations",    label: "Consultations",   icon: "🩺", roles: ["SUPER_ADMIN","NURSE","ROLE_DOCTOR"] },
-  { path: "/prescriptions",    label: "Prescriptions",   icon: "💊", roles: ["SUPER_ADMIN","NURSE","ROLE_DOCTOR"] },
+  { path: "/doctor/dashboard", label: "Dashboard",       icon: "🏠", roles: ["DOCTOR"] },
+  { path: "/patients",         label: "Patients",        icon: "👥", roles: ["SUPER_ADMIN","NURSE","DOCTOR"] },
+  { path: "/appointments",     label: "Appointments",    icon: "📅", roles: ["SUPER_ADMIN","NURSE","DOCTOR"] },
+  { path: "/records",          label: "Medical Records", icon: "📋", roles: ["SUPER_ADMIN","NURSE","DOCTOR"] },
+  { path: "/consultations",    label: "Consultations",   icon: "🩺", roles: ["SUPER_ADMIN","NURSE","DOCTOR"] },
+  { path: "/prescriptions",    label: "Prescriptions",   icon: "💊", roles: ["SUPER_ADMIN","NURSE","DOCTOR"] },
   { path: "/billing",          label: "Billing",         icon: "🧾", roles: ["SUPER_ADMIN","NURSE"] },
   { path: "/nurses",           label: "Nurses",          icon: "👩‍⚕️", roles: ["SUPER_ADMIN"] },
   { path: "/doctors",          label: "Doctors",         icon: "👨‍⚕️", roles: ["SUPER_ADMIN"] },
@@ -36,13 +36,13 @@ export default function Layout({ children }) {
   const roleLabel = {
     SUPER_ADMIN: "Super Admin",
     NURSE:       "Nurse",
-    ROLE_DOCTOR: "Doctor",
+    DOCTOR:      "Doctor",
   }[role] || role;
 
   const roleColor = {
     SUPER_ADMIN: "bg-purple-100 text-purple-700",
     NURSE:       "bg-blue-100 text-blue-700",
-    ROLE_DOCTOR: "bg-green-100 text-green-700",
+    DOCTOR:      "bg-green-100 text-green-700",
   }[role] || "bg-gray-100 text-gray-700";
 
   return (

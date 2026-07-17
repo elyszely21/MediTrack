@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useState } from "react";
 import Layout from "../../widgets/layout/Layout";
 import axios from "../../shared/api/axios";
 
@@ -30,7 +29,7 @@ export default function Consultations() {
       const res = await axios.get(`/consultations/patient/${pid}`);
       setConsultations(res.data);
       setSearchedId(pid);
-    } catch (e) {
+    } catch {
       setError("Failed to load consultations.");
     } finally {
       setLoading(false);
@@ -272,11 +271,14 @@ function InfoRow({ label, value, className = "" }) {
 
 function Modal({ title, onClose, children }) {
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
+      <div role="dialog" aria-modal="true" aria-label={title}
+        className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center p-4 border-b">
           <h2 className="text-lg font-semibold">{title}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+          <button onClick={onClose} aria-label="Close dialog"
+            className="text-gray-400 hover:text-gray-600 text-xl
+              focus:outline-none focus:ring-2 focus:ring-blue-300 rounded">✕</button>
         </div>
         <div className="p-4">{children}</div>
       </div>

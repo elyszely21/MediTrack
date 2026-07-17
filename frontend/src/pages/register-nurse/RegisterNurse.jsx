@@ -46,7 +46,7 @@ const RegisterNurse = () => {
     }
 
     try {
-      const response = await api.post('/auth/admin/register-nurse', form);
+      await api.post('/auth/admin/register-nurse', form);
       setMessage('Nurse registered successfully!');
       setForm({ fullName: '', email: '', phoneNumber: '', password: '', confirmPassword: '' });
       setTimeout(() => {

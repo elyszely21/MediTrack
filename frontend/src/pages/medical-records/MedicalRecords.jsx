@@ -12,14 +12,21 @@ export default function MedicalRecords() {
   const [error, setError]           = useState("");
   const [showForm, setShowForm]     = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
+  const [query, setQuery]           = useState("");
+
   const [form, setForm] = useState({
     diagnosis: "", treatment: "", prescription: "",
     notes: "", visitDate: ""
   });
 
+
   useEffect(() => {
-    axios.get("/patients").then(r => setPatients(r.data)).catch(() => {});
-  }, []);
+    if (!query.trim()) {
+      axios.get("/patients/staff-lookup").then(r => setPatients(r.data)).catch(() => {});
+    } else {
+      axios.get(`/patients/staff-lookup?q=${encodeURIComponent(query.trim())}`).then(r => setPatients(r.data)).catch(() => {});
+    }
+  }, [query]);
 
   const loadRecords = async (id) => {
     if (!id) { setRecords([]); return; }
@@ -78,17 +85,40 @@ export default function MedicalRecords() {
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Select Patient
         </label>
+
+        <div className="flex gap-2 mb-3">
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search patient (name/number)"
+            className="border border-gray-300 rounded-lg p-2 w-full
+              text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
         <select value={patientId}
           onChange={e => setPatientId(e.target.value)}
           className="border border-gray-300 rounded-lg p-2 w-full
             text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
           <option value="">— Select a patient —</option>
-          {patients.map(p => (
-            <option key={p.id} value={p.id}>
-              {p.patientNumber} — {p.firstName} {p.lastName}
-            </option>
-          ))}
+          {patients
+            .filter((p) => {
+              const q = query.trim().toLowerCase();
+              if (!q) return true;
+              return (
+                String(p.patientNumber || "").toLowerCase().includes(q) ||
+                String(p.firstName || "").toLowerCase().includes(q) ||
+                String(p.lastName || "").toLowerCase().includes(q)
+              );
+            })
+            .map(p => (
+              <option key={p.id} value={p.id}>
+                {p.patientNumber} — {p.firstName} {p.lastName}
+              </option>
+            ))}
         </select>
+
         {selectedPatient && (
           <div className="mt-3 flex items-center gap-3">
             <div className="w-8 h-8 bg-blue-100 rounded-full flex
@@ -109,6 +139,7 @@ export default function MedicalRecords() {
       </div>
 
       {successMsg && (
+
         <div className="bg-green-50 border border-green-200 text-green-700
           rounded-lg p-3 mb-4 text-sm">✅ {successMsg}</div>
       )}
@@ -245,13 +276,17 @@ function FormField({ label, field, form, setForm, type="text",
 function Modal({ title, onClose, children }) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 flex
-      items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4
-        max-h-[90vh] overflow-y-auto">
+      items-center justify-center z-50 p-4">
+      <div role="dialog" aria-modal="true" aria-label={title}
+        className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4
+          max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center p-4 border-b">
           <h2 className="text-lg font-semibold">{title}</h2>
-          <button onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+          <button onClick={onClose} aria-label="Close dialog"
+            className="text-gray-400 hover:text-gray-600 text-xl
+              focus:outline-none focus:ring-2 focus:ring-blue-300 rounded">
+            ✕
+          </button>
         </div>
         <div className="p-4">{children}</div>
       </div>
