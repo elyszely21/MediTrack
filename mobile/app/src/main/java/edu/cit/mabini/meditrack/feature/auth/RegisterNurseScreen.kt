@@ -48,7 +48,7 @@ fun RegisterNurseScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Register Nurse", fontWeight = FontWeight.Bold, color = Color.White) },
+                title = { Text("Register New Nurse", fontWeight = FontWeight.Bold, color = Color.White) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
@@ -69,7 +69,7 @@ fun RegisterNurseScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Add a new clinic nurse account",
+                text = "Create a new nurse account for clinic staff.",
                 fontSize = 14.sp,
                 color = Color(0xFF8B949E)
             )

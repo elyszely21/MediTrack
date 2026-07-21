@@ -4,6 +4,7 @@ import edu.cit.mabini.meditrack.feature.medicalrecords.data.model.MedicalRecordD
 import edu.cit.mabini.meditrack.feature.appointments.data.model.AppointmentDto
 import edu.cit.mabini.meditrack.feature.patients.data.model.PatientDto
 import edu.cit.mabini.meditrack.feature.patients.data.model.PatientLookupDto
+import edu.cit.mabini.meditrack.feature.patients.data.model.PatientProfileDto
 import edu.cit.mabini.meditrack.feature.doctors.data.model.DoctorDto
 import edu.cit.mabini.meditrack.feature.auth.RegisterRequest
 import edu.cit.mabini.meditrack.feature.auth.LoginResponse
@@ -26,6 +27,18 @@ interface ApiService {
     @GET("patients")
     suspend fun getPatients(): Response<List<PatientDto>>
 
+    @GET("patients/archived")
+    suspend fun getArchivedPatients(): Response<List<PatientDto>>
+
+    @GET("patients/staff-lookup")
+    suspend fun getStaffLookupPatients(@Query("q") query: String? = null): Response<List<PatientDto>>
+
+    @GET("patients/search")
+    suspend fun searchPatients(
+        @Query("q") query: String,
+        @Query("archived") archived: Boolean = false
+    ): Response<List<PatientDto>>
+
     @GET("patients/{id}")
     suspend fun getPatient(@Path("id") id: Long): Response<PatientDto>
 
@@ -34,6 +47,12 @@ interface ApiService {
 
     @PUT("patients/{id}")
     suspend fun updatePatient(@Path("id") id: Long, @Body dto: PatientDto): Response<PatientDto>
+
+    @PUT("patients/{id}/archive")
+    suspend fun archivePatient(@Path("id") id: Long): Response<Unit>
+
+    @PUT("patients/{id}/unarchive")
+    suspend fun unarchivePatient(@Path("id") id: Long): Response<Unit>
 
     @DELETE("patients/{id}")
     suspend fun deletePatient(@Path("id") id: Long): Response<Unit>
@@ -94,6 +113,9 @@ interface ApiService {
     @GET("appointments/status/{status}")
     suspend fun getAppointmentsByStatus(@Path("status") status: String): Response<List<AppointmentDto>>
 
+    @GET("appointments/doctor/dashboard")
+    suspend fun getDoctorDashboardStats(): Response<Map<String, Any>>
+
     @DELETE("appointments/{id}")
     suspend fun deleteAppointment(@Path("id") id: Long): Response<Unit>
 
@@ -106,7 +128,7 @@ interface ApiService {
 
     // Patient Portal
     @GET("patient-portal/me")
-    suspend fun getMyProfile(): Response<PatientDto>
+    suspend fun getMyProfile(): Response<PatientProfileDto>
 
     @GET("patient-portal/appointments")
     suspend fun getMyAppointments(): Response<List<AppointmentDto>>

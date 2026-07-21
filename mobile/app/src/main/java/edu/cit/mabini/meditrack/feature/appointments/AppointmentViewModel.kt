@@ -98,14 +98,14 @@ class AppointmentViewModel(private val repository: AppointmentRepository) : View
             try {
                 val response = when (action) {
                     "approve" -> repository.approve(id)
-                    "reject" -> repository.reject(id, reason)
+                    "reject" -> repository.reject(id, reason ?: "Rejected by staff")
                     "check-in" -> repository.checkIn(id)
                     "waiting" -> repository.waiting(id)
                     "in-consultation" -> repository.startConsultation(id)
                     "prescription-issued" -> repository.issuePrescription(id)
                     "complete" -> repository.complete(id)
-                    "cancel" -> repository.cancel(id, reason)
-                    "no-show" -> repository.noShow(id, reason)
+                    "cancel" -> repository.cancel(id, reason ?: "Cancelled by staff")
+                    "no-show" -> repository.noShow(id, reason ?: "No-show recorded")
                     "delete" -> {
                         val delRes = repository.delete(id)
                         if (delRes.isSuccessful) {

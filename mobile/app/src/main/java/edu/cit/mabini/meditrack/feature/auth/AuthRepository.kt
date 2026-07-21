@@ -4,6 +4,7 @@ import edu.cit.mabini.meditrack.core.network.ApiService
 import edu.cit.mabini.meditrack.feature.auth.LoginRequest
 import edu.cit.mabini.meditrack.feature.auth.LoginResponse
 import edu.cit.mabini.meditrack.feature.auth.RegisterRequest
+import edu.cit.mabini.meditrack.feature.patients.data.model.PatientProfileDto
 import retrofit2.Response
 
 class AuthRepository(private val api: ApiService) {
@@ -27,4 +28,6 @@ class AuthRepository(private val api: ApiService) {
         confirmPassword: String
     ): Response<LoginResponse> =
         api.registerNurse(RegisterRequest(fullName, email, phoneNumber, password, confirmPassword))
+
+    suspend fun getMyProfile(): Response<PatientProfileDto> = api.getMyProfile()
 }

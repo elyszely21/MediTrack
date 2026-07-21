@@ -1,5 +1,6 @@
 package edu.cit.mabini.meditrack.feature.medicalrecords
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -49,7 +50,7 @@ fun MedicalRecordsScreen(
     LaunchedEffect(actionState) {
         if (actionState is RecordActionState.Success) {
             showAddDialog = false
-            snackbarHostState.showSnackbar("Record saved")
+            snackbarHostState.showSnackbar("Record saved successfully")
             viewModel.resetActionState()
         }
     }
@@ -57,15 +58,21 @@ fun MedicalRecordsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (isStaff) "Medical Records" else "My Health History", fontWeight = FontWeight.Bold, color = Color.White) },
+                title = { 
+                    Column {
+                        Text(if (isStaff) "Medical Records" else "My Health History", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 20.sp)
+                        if (isStaff && patientId != 0L) {
+                            Text("Viewing patient history", color = Color(0xFF8B949E), fontSize = 12.sp)
+                        }
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
                 },
                 actions = {
-                    // Only staff can add records
-                    if (isStaff) {
+                    if (isStaff && patientId != 0L) {
                         IconButton(onClick = { showAddDialog = true }) {
                             Icon(Icons.Default.Add, contentDescription = "Add Record", tint = Color.White)
                         }
@@ -97,12 +104,31 @@ fun MedicalRecordsScreen(
                 is RecordUiState.Success -> {
                     val records = (uiState as RecordUiState.Success).records
                     if (records.isEmpty()) {
-                        Text("No records found for this patient", color = Color(0xFF8B949E), modifier = Modifier.align(Alignment.Center))
+                        Column(
+                            modifier = Modifier.align(Alignment.Center),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("📭", fontSize = 48.sp)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = if (isStaff) "No records found for this patient" else "No medical records yet",
+                                color = Color(0xFF8B949E)
+                            )
+                            if (isStaff && patientId != 0L) {
+                                Button(
+                                    onClick = { showAddDialog = true },
+                                    modifier = Modifier.padding(top = 16.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))
+                                ) {
+                                    Text("Add First Record")
+                                }
+                            }
+                        }
                     } else {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             items(records) { record ->
                                 MedicalRecordCard(record)
@@ -129,45 +155,77 @@ fun MedicalRecordCard(record: MedicalRecordDto) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22))
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF30363D))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            val formattedDate = try {
-                val date = LocalDate.parse(record.visitDate)
-                date.format(DateTimeFormatter.ofPattern("MMM dd, yyyy"))
-            } catch (e: Exception) {
-                record.visitDate ?: "N/A"
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column {
+                    Text(
+                        text = record.diagnosis ?: "No diagnosis",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "📅 Visit Date: ${record.visitDate ?: "—"}",
+                        color = Color(0xFF2196F3),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
+                Text(
+                    text = "Record #${record.id}",
+                    color = Color(0xFF8B949E),
+                    fontSize = 10.sp
+                )
             }
 
-            Text(
-                text = formattedDate,
-                color = Color(0xFF2196F3),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             
-            Text(record.diagnosis ?: "No diagnosis", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-            Spacer(modifier = Modifier.height(4.dp))
-            
-            if (!record.treatment.isNullOrBlank()) {
-                LabeledText("Treatment", record.treatment)
-            }
-            if (!record.prescription.isNullOrBlank()) {
-                LabeledText("Rx", record.prescription, valueColor = Color(0xFF2196F3))
-            }
-            if (!record.notes.isNullOrBlank()) {
-                Text(record.notes, color = Color(0xFF8B949E), fontSize = 13.sp, fontStyle = FontStyle.Italic)
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (!record.treatment.isNullOrBlank()) {
+                    RecordSection("Treatment", record.treatment, Color(0xFF8B949E).copy(alpha = 0.1f))
+                }
+                if (!record.prescription.isNullOrBlank()) {
+                    RecordSection("Prescription", record.prescription, Color(0xFF2196F3).copy(alpha = 0.1f), Color(0xFF2196F3))
+                }
+                if (!record.notes.isNullOrBlank()) {
+                    RecordSection("Notes", record.notes, Color(0xFFF9A825).copy(alpha = 0.05f), labelColor = Color(0xFFF9A825), isItalic = true)
+                }
             }
         }
     }
 }
 
 @Composable
-fun LabeledText(label: String, value: String, valueColor: Color = Color.White) {
-    Row(modifier = Modifier.padding(vertical = 2.dp)) {
-        Text("$label: ", color = Color(0xFF8B949E), fontSize = 13.sp)
-        Text(value, color = valueColor, fontSize = 13.sp)
+fun RecordSection(
+    label: String,
+    content: String,
+    bgColor: Color,
+    labelColor: Color = Color(0xFF8B949E),
+    isItalic: Boolean = false
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = bgColor,
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(label, color = labelColor, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Text(
+                text = content,
+                color = Color.White,
+                fontSize = 13.sp,
+                fontStyle = if (isItalic) FontStyle.Italic else FontStyle.Normal,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+        }
     }
 }
 
@@ -183,6 +241,7 @@ fun AddRecordDialog(
     var prescription by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
     var visitDate by remember { mutableStateOf(LocalDate.now().toString()) }
+    var error by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -193,21 +252,26 @@ fun AddRecordDialog(
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
             ) {
-                DialogField("Diagnosis*", diagnosis) { diagnosis = it }
-                DialogField("Treatment", treatment, singleLine = false) { treatment = it }
-                DialogField("Prescription", prescription, singleLine = false) { prescription = it }
-                DialogField("Notes", notes, singleLine = false) { notes = it }
-                DialogField("Visit Date*", visitDate, placeholder = "yyyy-MM-dd") { visitDate = it }
+                RecordFormField("Visit Date *", visitDate, placeholder = "yyyy-MM-dd") { visitDate = it }
+                RecordFormField("Diagnosis *", diagnosis) { diagnosis = it }
+                RecordFormField("Treatment", treatment, singleLine = false) { treatment = it }
+                RecordFormField("Prescription", prescription, singleLine = false) { prescription = it }
+                RecordFormField("Notes", notes, singleLine = false) { notes = it }
 
+                if (error.isNotEmpty()) {
+                    Text(error, color = Color(0xFFEF5350), fontSize = 12.sp)
+                }
                 if (actionState is RecordActionState.Error) {
-                    Text(actionState.message, color = Color(0xFFEF5350), fontSize = 14.sp)
+                    Text(actionState.message, color = Color(0xFFEF5350), fontSize = 12.sp)
                 }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    if (diagnosis.isNotBlank() && visitDate.isNotBlank()) {
+                    if (diagnosis.isBlank() || visitDate.isBlank()) {
+                        error = "Required fields missing"
+                    } else {
                         onConfirm(MedicalRecordDto(
                             diagnosis = diagnosis,
                             treatment = treatment.ifBlank { null },
@@ -223,7 +287,7 @@ fun AddRecordDialog(
                 if (actionState is RecordActionState.Loading) {
                     CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White)
                 } else {
-                    Text("Save")
+                    Text("Save Record")
                 }
             }
         },
@@ -237,11 +301,10 @@ fun AddRecordDialog(
 }
 
 @Composable
-fun DialogField(
+fun RecordFormField(
     label: String,
     value: String,
     placeholder: String = "",
-    keyboardType: KeyboardType = KeyboardType.Text,
     singleLine: Boolean = true,
     onValueChange: (String) -> Unit
 ) {
@@ -253,8 +316,6 @@ fun DialogField(
             onValueChange = onValueChange,
             placeholder = { Text(placeholder, color = Color(0xFF484F58)) },
             modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-            singleLine = singleLine,
             shape = RoundedCornerShape(8.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Color(0xFF2196F3),
@@ -263,7 +324,9 @@ fun DialogField(
                 unfocusedTextColor = Color.White,
                 focusedContainerColor = Color(0xFF21262D),
                 unfocusedContainerColor = Color(0xFF21262D)
-            )
+            ),
+            singleLine = singleLine,
+            maxLines = if (singleLine) 1 else 5
         )
     }
 }

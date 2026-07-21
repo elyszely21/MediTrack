@@ -1,6 +1,7 @@
 package edu.cit.mabini.meditrack.feature.appointments
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,9 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -83,7 +82,7 @@ fun AppointmentsScreen(
         containerColor = Color(0xFF0D1117)
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
-            // Status Filters
+            // Status Filters - Replicating Tab behavior from React
             val statuses = listOf("ALL", "REQUESTED", "PENDING_APPROVAL", "APPROVED", "CHECKED_IN", "WAITING", "IN_CONSULTATION", "PRESCRIPTION_ISSUED", "COMPLETED", "NO_SHOW", "CANCELLED", "REJECTED")
             ScrollableTabRow(
                 selectedTabIndex = statuses.indexOf(statusFilter).coerceAtLeast(0),
@@ -96,7 +95,13 @@ fun AppointmentsScreen(
                     Tab(
                         selected = statusFilter == status,
                         onClick = { viewModel.setStatusFilter(status, isStaff) },
-                        text = { Text(status.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() }, fontSize = 13.sp) },
+                        text = { 
+                            Text(
+                                text = status.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() },
+                                fontSize = 13.sp,
+                                fontWeight = if (statusFilter == status) FontWeight.Bold else FontWeight.Normal
+                            ) 
+                        },
                         selectedContentColor = Color(0xFF2196F3),
                         unselectedContentColor = Color(0xFF8B949E)
                     )
@@ -124,7 +129,14 @@ fun AppointmentsScreen(
                         val appointments = (uiState as AppointmentUiState.Success).appointments
                         
                         if (appointments.isEmpty()) {
-                            Text("No appointments found", color = Color(0xFF8B949E), modifier = Modifier.align(Alignment.Center))
+                            Column(
+                                modifier = Modifier.align(Alignment.Center),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text("📅", fontSize = 48.sp)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text("No appointments found", color = Color(0xFF8B949E))
+                            }
                         } else {
                             LazyColumn(
                                 modifier = Modifier.fillMaxSize(),
@@ -183,7 +195,8 @@ fun AppointmentCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22))
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF30363D))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -193,14 +206,20 @@ fun AppointmentCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "${appointment.appointmentDate} at ${appointment.appointmentTime?.take(5)}",
+                        text = "${appointment.appointmentDate} • ${appointment.appointmentTime?.take(5)}",
                         color = Color.White,
                         fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = appointment.patientName ?: "Patient #${appointment.patientId}",
+                        color = Color(0xFF2196F3),
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold
                     )
-                    Text("Patient: ${appointment.patientName ?: "Patient #${appointment.patientId}"}", color = Color(0xFF8B949E), fontSize = 13.sp)
-                    Text("Number: ${appointment.patientNumber ?: "N/A"}", color = Color(0xFF8B949E), fontSize = 12.sp)
-                    if (!appointment.remarks.isNullOrBlank()) {
+                    Text("No: ${appointment.patientNumber ?: "N/A"}", color = Color(0xFF8B949E), fontSize = 12.sp)
+                    if (appointment.remarks.isNotBlank()) {
                         Text("Remarks: ${appointment.remarks}", color = Color(0xFF8B949E), fontSize = 12.sp, maxLines = 2)
                     }
                 }
@@ -208,6 +227,8 @@ fun AppointmentCard(
             }
 
             if (isAdmin) {
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(color = Color(0xFF30363D))
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -252,12 +273,13 @@ fun AppointmentCard(
 fun ActionButton(text: String, color: Color, onClick: () -> Unit) {
     Button(
         onClick = onClick,
-        colors = ButtonDefaults.buttonColors(containerColor = color),
+        colors = ButtonDefaults.buttonColors(containerColor = color.copy(alpha = 0.2f), contentColor = color),
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
         modifier = Modifier.height(32.dp),
-        shape = RoundedCornerShape(8.dp)
+        shape = RoundedCornerShape(8.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.5f))
     ) {
-        Text(text, fontSize = 11.sp, color = Color.White)
+        Text(text, fontSize = 11.sp, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -266,28 +288,29 @@ fun StatusChip(status: String?) {
     val statusMap = mapOf(
         "REQUESTED" to (Color(0xFFFFF9C4) to Color(0xFFF57F17)),
         "PENDING_APPROVAL" to (Color(0xFFE3F2FD) to Color(0xFF0D47A1)),
-        "APPROVED" to (Color(0xFFE8F5E9) to Color(0xFF1B5E20)),
-        "CHECKED_IN" to (Color(0xFFE8EAF6) to Color(0xFF1A237E)),
-        "WAITING" to (Color(0xFFF3E5F5) to Color(0xFF4A148C)),
-        "IN_CONSULTATION" to (Color(0xFFE0F7FA) to Color(0xFF006064)),
-        "PRESCRIPTION_ISSUED" to (Color(0xFFE0F2F1) to Color(0xFF004D40)),
-        "COMPLETED" to (Color(0xFFE8F5E9) to Color(0xFF1B5E20)),
+        "APPROVED" to (Color(0xFFE3F2FD) to Color(0xFF2196F3)),
+        "CHECKED_IN" to (Color(0xFFE8EAF6) to Color(0xFF3F51B5)),
+        "WAITING" to (Color(0xFFF3E5F5) to Color(0xFF9C27B0)),
+        "IN_CONSULTATION" to (Color(0xFFE0F7FA) to Color(0xFF00BCD4)),
+        "PRESCRIPTION_ISSUED" to (Color(0xFFE0F2F1) to Color(0xFF009688)),
+        "COMPLETED" to (Color(0xFFE8F5E9) to Color(0xFF4CAF50)),
         "NO_SHOW" to (Color(0xFFF5F5F5) to Color(0xFF616161)),
         "CANCELLED" to (Color(0xFFF5F5F5) to Color(0xFF616161)),
-        "REJECTED" to (Color(0xFFFFEBEE) to Color(0xFFB71C1C))
+        "REJECTED" to (Color(0xFFFFEBEE) to Color(0xFFF44336))
     )
 
     val (bgColor, textColor) = statusMap[status] ?: (Color(0xFF30363D) to Color(0xFF8B949E))
 
     Surface(
-        color = bgColor,
-        shape = RoundedCornerShape(20.dp)
+        color = bgColor.copy(alpha = 0.1f),
+        shape = RoundedCornerShape(20.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, bgColor.copy(alpha = 0.3f))
     ) {
         Text(
             text = status?.replace("_", " ") ?: "UNKNOWN",
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-            fontSize = 11.sp,
-            fontWeight = FontWeight.SemiBold,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
             color = textColor
         )
     }
@@ -374,10 +397,10 @@ fun AddAppointmentDialog(
                 DialogField("Remarks", remarks, singleLine = false) { remarks = it }
 
                 if (error.isNotBlank()) {
-                    Text(error, color = Color(0xFFEF5350), fontSize = 14.sp)
+                    Text(error, color = Color(0xFFEF5350), fontSize = 12.sp)
                 }
                 if (actionState is AppointmentActionState.Error) {
-                    Text((actionState as AppointmentActionState.Error).message, color = Color(0xFFEF5350), fontSize = 14.sp)
+                    Text((actionState as AppointmentActionState.Error).message, color = Color(0xFFEF5350), fontSize = 12.sp)
                 }
             }
         },
@@ -397,7 +420,7 @@ fun AddAppointmentDialog(
                             val formattedTime = if (time.length == 5) "$time:00" else time
                             // Calculate end time
                             val sdf = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US)
-                            val startTimeDate = sdf.parse(formattedTime)
+                            val startTimeDate = try { sdf.parse(formattedTime) } catch (e: Exception) { null }
                             if (startTimeDate != null) {
                                 val calendar = java.util.Calendar.getInstance()
                                 calendar.time = startTimeDate
@@ -406,7 +429,7 @@ fun AddAppointmentDialog(
 
                                 viewModel.createAppointment(AppointmentDto(
                                     patientId = patient.id,
-                                    doctorId = doctorId,
+                                    doctorId = doctorId!!,
                                     appointmentDate = date,
                                     appointmentTime = formattedTime,
                                     endTime = endTime,
@@ -415,6 +438,8 @@ fun AddAppointmentDialog(
                                     remarks = if (remarks.isBlank()) " — " else remarks,
                                     status = "REQUESTED"
                                 ), isStaff)
+                            } else {
+                                error = "Invalid time format"
                             }
                         }
                     }
@@ -462,13 +487,15 @@ fun ActionConfirmationDialog(
                     OutlinedTextField(
                         value = reason,
                         onValueChange = onReasonChange,
-                        label = { Text("Reason (optional)") },
+                        label = { Text("Reason (required)") },
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = Color(0xFF2196F3),
                             unfocusedBorderColor = Color(0xFF30363D),
                             focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White
+                            unfocusedTextColor = Color.White,
+                            focusedContainerColor = Color(0xFF21262D),
+                            unfocusedContainerColor = Color(0xFF21262D)
                         )
                     )
                 }
@@ -477,7 +504,7 @@ fun ActionConfirmationDialog(
         confirmButton = {
             Button(
                 onClick = onConfirm,
-                enabled = !isSubmitting,
+                enabled = !isSubmitting && (if (action == "reject" || action == "cancel" || action == "no-show") reason.isNotBlank() else true),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = when(action) {
                         "reject", "delete" -> Color(0xFFC62828)

@@ -33,6 +33,14 @@ class AuthViewModel(
                 if (response.isSuccessful && response.body() != null) {
                     val body = response.body()!!
                     session.save(body)
+                    
+                    if (body.role == "PATIENT") {
+                        val profileRes = repository.getMyProfile()
+                        if (profileRes.isSuccessful && profileRes.body() != null) {
+                            session.saveUserId(profileRes.body()!!.id)
+                        }
+                    }
+
                     _uiState.value = AuthUiState.Success(body)
                 } else {
                     _uiState.value = AuthUiState.Error(parseError(response.errorBody()?.string()))

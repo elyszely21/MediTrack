@@ -97,6 +97,7 @@ fun AppNavigation(context: Context) {
         composable("patients") {
             PatientsScreen(
                 viewModel = patientViewModel,
+                userRole = authViewModel.getRole(),
                 onBack = { navController.popBackStack() },
                 onViewRecords = { patientId ->
                     navController.navigate("records/$patientId")

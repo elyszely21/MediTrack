@@ -21,6 +21,9 @@ class AppointmentRepository(private val api: ApiService) {
     suspend fun getMyAppointments(): Response<List<AppointmentDto>> =
         api.getMyAppointments()
 
+    suspend fun getDoctorDashboardStats(): Response<Map<String, Any>> =
+        api.getDoctorDashboardStats()
+
     suspend fun create(dto: AppointmentDto): Response<AppointmentDto> =
         api.createAppointment(dto)
 

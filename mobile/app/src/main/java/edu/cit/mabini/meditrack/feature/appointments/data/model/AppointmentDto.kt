@@ -5,9 +5,9 @@ data class AppointmentDto(
     val patientId: Long = 0,
     val patientName: String? = null,
     val patientNumber: String? = null,
-    val doctorId: Long? = null,
+    val doctorId: Long = 0,
     val appointmentNumber: String? = null,
-    val appointmentType: String = "CONSULTATION",
+    val appointmentType: String = "",
     val queueNumber: Int? = null,
     val durationMinutes: Int = 30,
     val priority: Int? = null,
@@ -16,5 +16,7 @@ data class AppointmentDto(
     val appointmentTime: String? = null,
     val endTime: String? = null,
     val status: String? = null,
-    val remarks: String? = null
+    val remarks: String = "",
+    val createdAt: String? = null,
+    val updatedAt: String? = null
 )

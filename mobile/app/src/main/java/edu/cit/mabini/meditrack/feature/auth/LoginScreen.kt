@@ -49,14 +49,14 @@ fun LoginScreen(
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "MediTrack",
+                text = "Welcome Back",
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF2196F3),
                 textAlign = TextAlign.Center
             )
             Text(
-                text = "Clinic Records Management System",
+                text = "Sign in to continue tracking your medication inventory.",
                 fontSize = 14.sp,
                 color = Color(0xFF8B949E),
                 textAlign = TextAlign.Center
@@ -153,7 +153,7 @@ fun LoginScreen(
                                 strokeWidth = 2.dp
                             )
                         } else {
-                            Text("Sign In", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            Text("Login", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                         }
                     }
                 }
@@ -164,9 +164,9 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center
             ) {
-                Text("Don't have an account? ", color = Color(0xFF8B949E))
+                Text("New here? ", color = Color(0xFF8B949E))
                 Text(
-                    text = "Register",
+                    text = "Create an account",
                     color = Color(0xFF2196F3),
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.clickable { onNavigateToRegister() }

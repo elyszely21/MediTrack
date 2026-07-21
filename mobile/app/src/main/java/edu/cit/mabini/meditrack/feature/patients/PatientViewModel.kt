@@ -31,11 +31,25 @@ class PatientViewModel(private val repository: PatientRepository) : ViewModel() 
     private val _actionState = MutableStateFlow<PatientActionState>(PatientActionState.Idle)
     val actionState: StateFlow<PatientActionState> = _actionState.asStateFlow()
 
-    fun loadPatients() {
+    fun loadPatients(role: String, searchQuery: String = "", showArchived: Boolean = false) {
         viewModelScope.launch {
             _uiState.value = PatientUiState.Loading
             try {
-                val response = repository.getAll()
+                val isAdmin = role == "SUPER_ADMIN"
+                val response = if (searchQuery.isNotBlank()) {
+                    if (isAdmin) {
+                        repository.search(searchQuery.trim(), showArchived)
+                    } else {
+                        repository.staffLookup(searchQuery.trim())
+                    }
+                } else {
+                    if (isAdmin) {
+                        if (showArchived) repository.getArchived() else repository.getAll()
+                    } else {
+                        repository.staffLookup()
+                    }
+                }
+
                 if (response.isSuccessful) {
                     _uiState.value = PatientUiState.Success(response.body() ?: emptyList())
                 } else {
@@ -47,14 +61,14 @@ class PatientViewModel(private val repository: PatientRepository) : ViewModel() 
         }
     }
 
-    fun createPatient(dto: PatientDto) {
+    fun createPatient(role: String, dto: PatientDto) {
         viewModelScope.launch {
             _actionState.value = PatientActionState.Loading
             try {
                 val response = repository.create(dto)
                 if (response.isSuccessful) {
                     _actionState.value = PatientActionState.Success
-                    loadPatients()
+                    loadPatients(role)
                 } else {
                     _actionState.value = PatientActionState.Error("Failed to create patient")
                 }
@@ -64,14 +78,14 @@ class PatientViewModel(private val repository: PatientRepository) : ViewModel() 
         }
     }
 
-    fun updatePatient(id: Long, dto: PatientDto) {
+    fun updatePatient(role: String, id: Long, dto: PatientDto) {
         viewModelScope.launch {
             _actionState.value = PatientActionState.Loading
             try {
                 val response = repository.update(id, dto)
                 if (response.isSuccessful) {
                     _actionState.value = PatientActionState.Success
-                    loadPatients()
+                    loadPatients(role)
                 } else {
                     _actionState.value = PatientActionState.Error("Failed to update patient")
                 }
@@ -81,14 +95,31 @@ class PatientViewModel(private val repository: PatientRepository) : ViewModel() 
         }
     }
 
-    fun deletePatient(id: Long) {
+    fun archivePatient(role: String, id: Long, isArchived: Boolean) {
+        viewModelScope.launch {
+            _actionState.value = PatientActionState.Loading
+            try {
+                val response = if (isArchived) repository.unarchive(id) else repository.archive(id)
+                if (response.isSuccessful) {
+                    _actionState.value = PatientActionState.Success
+                    loadPatients(role)
+                } else {
+                    _actionState.value = PatientActionState.Error("Failed to update patient status")
+                }
+            } catch (e: Exception) {
+                _actionState.value = PatientActionState.Error(e.message ?: "An unexpected error occurred")
+            }
+        }
+    }
+
+    fun deletePatient(role: String, id: Long) {
         viewModelScope.launch {
             _actionState.value = PatientActionState.Loading
             try {
                 val response = repository.delete(id)
                 if (response.isSuccessful) {
                     _actionState.value = PatientActionState.Success
-                    loadPatients()
+                    loadPatients(role)
                 } else {
                     _actionState.value = PatientActionState.Error("Failed to delete patient")
                 }

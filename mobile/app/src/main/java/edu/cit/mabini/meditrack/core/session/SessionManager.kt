@@ -18,12 +18,15 @@ class SessionManager(context: Context) {
     fun save(response: LoginResponse) {
         prefs.edit().apply {
             putString(KEY_TOKEN, response.token)
-            putLong(KEY_USER_ID, response.id)
             putString(KEY_FULL_NAME, response.fullName)
             putString(KEY_EMAIL, response.email)
             putString(KEY_ROLE, response.role)
             apply()
         }
+    }
+
+    fun saveUserId(id: Long) {
+        prefs.edit().putLong(KEY_USER_ID, id).apply()
     }
 
     fun getToken(): String? = prefs.getString(KEY_TOKEN, null)

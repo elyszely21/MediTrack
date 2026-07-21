@@ -55,10 +55,17 @@ fun RegisterScreen(
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "MediTrack",
+                text = "Create Account",
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF2196F3)
+            )
+            Text(
+                text = "Join MediTrack to access healthcare services and manage your health records.",
+                fontSize = 14.sp,
+                color = Color(0xFF8B949E),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.padding(top = 8.dp)
             )
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -159,7 +166,7 @@ fun RegisterScreen(
             ) {
                 Text("Already have an account? ", color = Color(0xFF8B949E))
                 Text(
-                    text = "Sign In",
+                    text = "Log in",
                     color = Color(0xFF2196F3),
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.clickable { onNavigateToLogin() }
