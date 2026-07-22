@@ -206,7 +206,7 @@ public class AppointmentController {
 
 
     @GetMapping("/lookup-patient/{patientNumber}")
-    @PreAuthorize("hasAnyRole('DOCTOR','NURSE','SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('DOCTOR','NURSE','SUPER_ADMIN','PATIENT')")
     public ResponseEntity<?> lookupPatientByNumber(@PathVariable String patientNumber) {
 
         try {

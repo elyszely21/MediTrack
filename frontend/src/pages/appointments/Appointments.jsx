@@ -179,7 +179,7 @@ export default function Appointments() {
         appointmentType: "CONSULTATION",
         durationMinutes: durationMinutes,
         appointmentDate: form.appointmentDate,
-        appointmentTime: startTime + ":00",
+        appointmentTime: form.appointmentTime + ":00",
         endTime: endTime + ":00",
         remarks: form.remarks || "—"
       });

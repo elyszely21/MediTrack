@@ -52,10 +52,20 @@ public class AppointmentService {
     }
 
     public PatientLookupDto lookupPatientByNumber(String patientNumber) {
-        // Keep existing behavior: this is permitAll() at URL level. No clinical PHI leakage beyond patient name/number.
-        return patientRepository.findByPatientNumber(patientNumber)
-                .map(this::toPatientLookupDto)
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String role = resolveRole(auth);
+
+        Patient patient = patientRepository.findByPatientNumber(patientNumber)
                 .orElseThrow(() -> new IllegalArgumentException("Patient not found"));
+
+        if ("PATIENT".equals(role)) {
+            Long selfPatientId = resolvePatientIdForAuthenticatedPatient(auth.getName());
+            if (!selfPatientId.equals(patient.getId())) {
+                throw new AccessDeniedException("Patients can only look up their own records");
+            }
+        }
+
+        return toPatientLookupDto(patient);
     }
 
 
